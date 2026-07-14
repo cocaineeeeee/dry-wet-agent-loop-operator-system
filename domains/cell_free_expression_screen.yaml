@@ -1,0 +1,173 @@
+# M24 THIRD-domain existence proof: cell-free expression screening -- the first
+# structurally GEOMETRY-FREE domain (dry sequence-proxy leg + wet plate-reader leg).
+# Structural twin of catalyst_screen.yaml: the SAME kernel/planner/qc/scheduler drive
+# it; only this file + the adapters' domain tables change. Biology is confined to the
+# domain/provider/adapter/leaf layer -- the kernel/planner/evidence-compiler never see a
+# construct/promoter/rbs/sequence literal (that is the domain-neutral-kernel hard gate).
+#
+# DUAL-LEG (M16 §1 / G4): one design space, two independent execution legs:
+#   * dry leg  (adapter: sequence_proxy) -> metric `expression_proxy` (dimensionless
+#     [0,1] scalar synthesised from four honest-biased sequence-feature proxies:
+#     GC / CAI / RBS strength / 5'UTR folding, adapters/dry/sequences.py). It carries
+#     REAL approximation error and is a deliberately biased proxy for expression; NO
+#     molecular geometry is involved or fabricated -- the dry input is the construct
+#     SEQUENCE. Constructs: adapters/dry/constructs.py (CONSTRUCTS). SequenceProxyAdapter
+#     is synchronous/in-process/deterministic (no PySCF, no subprocess, no sbatch).
+#   * wet leg  (WetDriver + sim_reader) -> metric `expression_fluorescence` (a.u.). The
+#     hidden truth surface (sim_reader.TruthSurface, profile `expression_high`) is a 1D
+#     Gaussian in the realised normalized construct DESIGN COORDINATE; batch/plate
+#     artefacts (plate_offset, calibration drift, dropout) are injected server-side in
+#     the reader, not via expos injectors.
+#
+# `adapter: sequence_proxy` names the dry screening leg. Like `pyscf_dry`, it is a
+# DUAL-LEG adapter driven out-of-band by `--loop mcl` (build_adapter is never called for
+# it). SESSION-B DEPENDENCY (see report): mcl must register `sequence_proxy` in the dry
+# dispatch (capability = sequence_construct), teach load_domain/build_adapter to treat it
+# as a dual-leg leg (as pyscf_dry is treated, dimw5_handoff §1), and drive the wet leg
+# out-of-band. Until B lands that, full load_domain() rejects this file at the adapter
+# gate ("unknown adapter: 'sequence_proxy'") -- the EXACT staging precedent solvent_screen
+# / catalyst_screen sat in before their dry legs were registered. The design_space /
+# objective / budget / sentinel / provider blocks are already structurally valid and the
+# provider passes birth-time governance (tests/test_m24_bio_domain.py).
+name: cell_free_expression_screen
+adapter: sequence_proxy
+
+# M21/M24 domain provider: the `<module>:<Class>` locator. load_domain imports it, runs
+# birth-time governance (check_complete: wet_coords levels == compute_targets keys, the
+# three expression faces non-empty, `flat` null declared, seed claims well-formed) and
+# validate_yaml (the `construct` choices must equal the provider's CONSTRUCTS levels), and
+# folds its source-hash fingerprint into config_fingerprint. Consolidation-by-reference:
+# the provider returns the same leaf tables (CONSTRUCTS/CONSTRUCT_DESCRIPTORS/
+# TRUTH_PROFILES) the leaf modules hold, so declaring it changes no run behaviour.
+provider: expos.adapters.providers.cell_free_expression_screen:CellFreeExpressionScreenProvider
+
+objective:
+  name: expression_fluorescence
+  metric: expression_fluorescence
+  direction: maximize
+  description: >-
+    Wet plate-reader fluorescence (reporter expression proxy, a.u.) from a prepared
+    cell-free construct. Hidden truth is a unimodal Gaussian in the realised normalized
+    construct design coordinate (reader profile `expression_high`, optimum toward the
+    strong-design end); the response surface lives only in the reader simulator. The dry
+    leg reports a separate `expression_proxy` channel (sequence features) used for
+    Dry->Wet promotion, not as this objective directly.
+
+design_space:
+  name: cell_free_expression_screen
+  variables:
+    # Load-bearing screening dim: drives BOTH legs and the hidden truth. The dry leg
+    # computes each construct's expression_proxy off its sequence; the wet leg realises
+    # its public normalized design coordinate (public design knowledge from the Anderson
+    # promoter relative strengths, NOT truth). Coordinate table: adapters/dry/constructs.py
+    # CONSTRUCT_DESCRIPTORS (transcribed verbatim below). WIRING (session B): the mcl
+    # wet-leg build reads `descriptors` and calls compile_wet(..., descriptors=
+    # cfg.design_space.var("construct").descriptors, screen_param="construct").
+    - name: construct
+      kind: categorical
+      choices: [j23100, j23102, j23104, j23101, j23106, j23110, j23105, j23116, j23114, j23117, j23103]
+      descriptors:
+        j23100: {coord: 1.0}
+        j23102: {coord: 0.86}
+        j23104: {coord: 0.72}
+        j23101: {coord: 0.7}
+        j23106: {coord: 0.47}
+        j23110: {coord: 0.33}
+        j23105: {coord: 0.24}
+        j23116: {coord: 0.16}
+        j23114: {coord: 0.1}
+        j23117: {coord: 0.06}
+        j23103: {coord: 0.01}
+    # Recorded protocol conditions: actuated/validated on the wet protocol and carried
+    # through custody, but FLAT in the truth surface (design-coordinate-only), exactly as
+    # the chemistry domains' continuous conditions. W-next may grow the truth surface to
+    # consume them. Ranges are standard cell-free (CFPS) protocol windows.
+    - {name: incubation_time, kind: continuous, low: 30.0, high: 240.0, unit: "min"}
+    - {name: temperature, kind: continuous, low: 25.0, high: 37.0, unit: "C"}
+
+restrictions: []
+
+# 96-well plate matches the wet plate-reader labware (corning_96_wellplate_360ul_flat).
+plate: {rows: 8, cols: 12}
+
+# `replicates` is the wet MULTI-REPLICATE substrate count (M17 K-F): >=~6 pairs/round are
+# needed for a decisive certification (letters 083a/093). Kept at 8 (same as the chemistry
+# domains) -- power is bought ONLY on the measurement side.
+replicates: 8
+# M24 replicate-independence declaration (bio ruling ③). Declared `biological`: each of a
+# construct's replicate wells is an INDEPENDENT cell-free reaction (separate master-mix
+# aliquot + reaction), so they ARE independent evidence and reach the evidence compiler at
+# full n (byte-identical to the legacy/chemistry independent-replicate behaviour, keeping
+# the loop certifiable). NOTE: if a future protocol instead re-measures ONE reaction across
+# wells, those inner reads are TECHNICAL replicates and MUST be collapsed to one biological
+# unit by expos.qc.replicate_collapse before certification (or the e-product over-counts).
+# SESSION-B DEPENDENCY (see report): thread cfg.replicate_kind into the qc-layer collapse
+# decision so `technical` triggers the collapse and `biological` does not.
+replicate_kind: biological
+
+# CALIBRATION SENTINEL: a strong-design construct (J23100) near the `expression_high`
+# truth optimum, used as the positive/reference calibration control. NOTE (charter
+# controls gap, see report): the charter requires a THREE-control set
+# (negative=no-template background / positive=strong reference / reference=calibration).
+# The DomainConfig schema today carries ONLY a single `sentinel` block (no `controls`
+# field), so the negative + positive controls the percent-of-control readout normalization
+# needs (adapters/wet/bio_readout.py) cannot be DECLARED here -- they must be constructed
+# at runtime by mcl (kernel Control supports kind=negative/positive). SESSION-B DEPENDENCY:
+# add a `controls` schema field (or an mcl control-builder) so all three are first-class.
+sentinel:
+  n: 2
+  params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}
+  expected_band: [0.6, 1.05]
+
+metric_range: [0.0, 1.2]   # wet `expression_fluorescence` RAW reader range (a.u.)
+
+# No expos artifact injectors: wet artefacts (plate_offset, calibration_drift, dropout)
+# are injected server-side in sim_reader; dry observations carry only genuine method
+# error. Intentionally empty (honest boundary).
+simulator: {}
+
+# G5: two rounds must run through cleanly on a small budget.
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+# ---- M20 domain-contract v2 (additive-optional; see expos/domain.py). Declares this
+# domain's REAL current state.
+
+# Controlled metric vocabulary: objective.metric + both legs' labels.
+metrics: [expression_fluorescence, expression_proxy]
+# Per-metric units from UNIT_VOCABULARY (strict equality, no kernel conversion).
+# expression_proxy is a synthesised dimensionless [0,1] scalar.
+metric_units:
+  expression_fluorescence: arbitrary_unit
+  expression_proxy: dimensionless
+
+# Dispatch kind: dual-leg, driven by `--loop mcl` (build_adapter never called for the dry
+# leg -- the out-of-band guard, same class as catalyst_screen's dry_compute leg).
+execution_kind: dry_compute
+
+observables:
+  - name: wet_expression
+    metric: expression_fluorescence
+    description: >-
+      Wet plate-reader reporter fluorescence (a.u.); hidden truth is a unimodal Gaussian
+      in the realised normalized construct design coordinate (reader simulator only).
+      Percent-of-control normalization (adapters/wet/bio_readout.py) is applied in the
+      READOUT layer against the negative/positive controls BEFORE ingest/certification.
+  - name: dry_expression_proxy
+    metric: expression_proxy
+    description: >-
+      Dry sequence-feature proxy (dimensionless [0,1]), synthesised from GC/CAI/RBS/
+      folding; a deliberately biased proxy used for Dry->Wet promotion, not the objective.
+    note: >-
+      TODO(M24): dry metric label not yet a first-class objective metric (same debt as
+      the chemistry domains' dry proxies) -- recorded so it stays machine-visible.
+
+# Acceptance-face debt ledger. expression_high + expression_flipped are LANDED (real
+# discriminative K-D face tests); `flat` is the shared cross-domain null face (landed).
+acceptance_faces:
+  - {face_name: expression_high, truth_profile: expression_high, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_expression_high_face_positive_sign_and_only_mu_differs"}
+  - {face_name: expression_flipped, truth_profile: expression_flipped, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_expression_flipped_face_flips_sign_only_mu_differs"}
+  - {face_name: flat, truth_profile: flat, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_flat_null_face_and_chemistry_anchors_unchanged"}

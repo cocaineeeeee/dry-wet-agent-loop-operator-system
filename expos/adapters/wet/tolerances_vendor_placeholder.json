@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "purpose": "sim-real differential-gate volume tolerance envelope, keyed by volume band (REF-P3 / INDEX_REF_P3 §Convergence(a)).",
+    "semantics": "acceptance = real result MUST lie inside the simulator-DECLARED envelope; the gate only does a containment test, it never recomputes the envelope.",
+    "source": "vendor_spec_placeholder",
+    "provenance": "Opentrons GEN2 white-paper accuracy/precision spectrum (P20/P300/P1000, decoded verbatim in INDEX_REF_P3 signal 2.1) as the primary seed; ISO 8655-2 MPE shape as cross-check. These are VENDOR SPEC placeholders, NOT this instrument's measured gravimetric data.",
+    "discipline_never_tighter": "真机重量法数据出现前永不更严 -- before real gravimetric (weight-method) data exists, this envelope may only be WIDENED (>= vendor spec), never tightened. Setting the gate stricter than the vendor spec would manufacture false negatives (real hardware never outruns its own factory spec). See INDEX_REF_P3 §Convergence(a)(ii) and Reject-list #5.",
+    "dual_representation": "each band carries BOTH a percent bound and a microliter FLOOR; the acceptance bound for a volume is max(pct-derived, floor) -- the WIDER wins, so near the minimum volume the absolute-uL floor dominates and a pure-% bound does not distort (INDEX_REF_P3 signal 1.3 / Reject-list #2).",
+    "systematic_vs_random": "systematic (accuracy, |mean-target|) and random (precision, CV) are DECLARED SEPARATELY and must be checked separately -- never folded into a single RMS/total-error (INDEX_REF_P3 §Convergence(b) / Reject-list #3). The per-action ledger carries ONE observed volume per transfer, so the differential gate applies the SYSTEMATIC (accuracy) bound + uL floor per action; the RANDOM (CV) channel requires N>=10 replicate observations per volume and is RESERVED until a replicate-bearing ledger exists (fields carried below for that future consumer).",
+    "n_replicates_min": 10,
+    "multichannel_note": "multi-channel heads (8/12/96) double the MPE (ISO 8655 multi-channel doubling, INDEX_REF_P3 signal 1.3); pass channels>1 to the gate to apply the x2 widening per channel."
+  },
+  "bands": [
+    {"max_ul": 2.0,    "max_systematic_pct": 15.0, "max_cv_pct": 5.0,  "floor_systematic_ul": 0.15, "floor_random_ul": 0.05, "source": "Opentrons P20 GEN2 @1uL min-vol"},
+    {"max_ul": 10.0,   "max_systematic_pct": 5.0,  "max_cv_pct": 3.0,  "floor_systematic_ul": 0.2,  "floor_random_ul": 0.1,  "source": "ISO 8655 low-vol x P20 interpolation"},
+    {"max_ul": 20.0,   "max_systematic_pct": 2.0,  "max_cv_pct": 1.0,  "floor_systematic_ul": 0.2,  "floor_random_ul": 0.1,  "source": "Opentrons P20 GEN2 mid/max"},
+    {"max_ul": 50.0,   "max_systematic_pct": 4.0,  "max_cv_pct": 2.5,  "floor_systematic_ul": 0.8,  "floor_random_ul": 0.5,  "source": "Opentrons P300 GEN2 @20uL min"},
+    {"max_ul": 150.0,  "max_systematic_pct": 2.0,  "max_cv_pct": 1.0,  "floor_systematic_ul": 1.5,  "floor_random_ul": 0.6,  "source": "Opentrons P300 mid x P1000 min"},
+    {"max_ul": 300.0,  "max_systematic_pct": 1.0,  "max_cv_pct": 0.4,  "floor_systematic_ul": 1.5,  "floor_random_ul": 0.6,  "source": "Opentrons P300 GEN2 mid/max"},
+    {"max_ul": 1000.0, "max_systematic_pct": 1.0,  "max_cv_pct": 0.3,  "floor_systematic_ul": 7.0,  "floor_random_ul": 1.5,  "source": "Opentrons P1000 GEN2 mid/max (widest end of 0.7-1.0% / 5-7uL, never-tighter discipline)"}
+  ]
+}

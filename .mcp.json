@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "expos": {
+      "command": "python",
+      "args": ["-m", "expos_mcp.server"],
+      "env": {}
+    }
+  }
+}

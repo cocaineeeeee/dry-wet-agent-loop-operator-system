@@ -1,0 +1,41 @@
+# 副演示域：液滴干燥沉积均匀性（咖啡环）——热插拔证明域
+name: coating
+adapter: sim_coating
+
+objective:
+  name: coating_uniformity
+  metric: uniformity_index
+  direction: maximize
+  description: >-
+    干燥沉积均匀性指数；环强度旋钮依据 Phys. Rev. Fluids 2024 表面捕获机制，
+    均匀性判据参照 G 参数（REFERENCE_MAP §9.2）。
+
+design_space:
+  name: coating
+  variables:
+    - {name: concentration, kind: continuous, low: 0.5, high: 5.0, unit: "wt%"}
+    - {name: tilt, kind: continuous, low: 0.0, high: 30.0, unit: "deg"}
+    - {name: dry_temp, kind: continuous, low: 20.0, high: 80.0, unit: "C"}
+    - {name: surfactant, kind: continuous, low: 1.0e-4, high: 1.0e-2, transform: log, unit: "w/w"}
+
+restrictions: []
+
+plate: {rows: 6, cols: 8}
+replicates: 2
+
+sentinel:
+  n: 5
+  params: {concentration: 2.0, tilt: 5.0, dry_temp: 50.0, surfactant: 1.0e-3}
+  expected_band: [0.1, 0.7]
+
+metric_range: [0.0, 1.2]
+
+simulator:
+  noise_sd: 0.02
+  artifact_scenario:
+    # coating 域天然边缘蒸发更强（咖啡环同源机制）
+    - {injector: edge_evaporation, params: {strength: 0.3, decay_wells: 1.2}}
+    - {round: 2, injector: batch_shift, params: {batch_suffix: B1, shift: -0.18}}
+
+budget: {wells_total: 192, rounds_total: 4}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}

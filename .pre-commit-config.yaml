@@ -1,0 +1,73 @@
+# expos pre-commit 配置（平台级工程纪律）
+# 安装： pip install pre-commit && pre-commit install
+# 全量跑： pre-commit run --all-files
+#
+# 设计原则（与 docs/ENGINEERING.md 一致）：
+#   - ruff 作为唯一 lint+format 网关（对齐 baybe / MADSci 现代实践）；不引入 black/flake8 叠加。
+#   - 基础 hygiene 钩子统一排除 references/（第三方 clone）与 runs/（运行产物）。
+#   - codespell 只查英文拼写，跳过中文误报高发的产物文件；中文注释/docstring 不受影响。
+#
+# 版本策略：钩子 rev 固定到当前常用稳定版；升级用 `pre-commit autoupdate` 并单独提 PR。
+
+# references/ 与 runs/ 全局不参与任何钩子（第三方代码 + 运行时数据，非本仓工程对象）
+exclude: '^(references/|runs/)'
+
+repos:
+  # ---- 基础 hygiene ----
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-added-large-files
+        # 500KB 上限：仓库不应吞入数据集/图像/模型；大文件走 runs/ 或外部存储
+        args: [--maxkb=500]
+
+  # ---- lint + format（唯一权威）----
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # ---- 英文拼写（跳过中文误报）----
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        # 只扫源码与文档；跳过锁文件、数据、笔记本、图像与运行产物。
+        # 中文字符不匹配 codespell 英文词典，故不会误报；此处仅排除混排易误报的产物文件类型。
+        # ignore-words-list：材料/实验领域缩写与刻意保留的拼写，避免误判。
+        args:
+          - --skip=*.lock,*.csv,*.json,*.jsonl,*.ipynb,*.png,*.jpg,*.svg,*.pdf,*.min.js
+          - --ignore-words-list=nd,te,ba,fo,ist,strat,ans,doubleclick,fpr,hte,mater,abl
+        exclude: '\.(lock|csv|json|jsonl|ipynb|png|jpg|svg|pdf)$'
+
+  # ---- 代码棘轮（异常吞并模式双向计数闸门，见 docs/ENGINEERING.md §4）----
+  - repo: local
+    hooks:
+      - id: exception-ratchet
+        name: exception-ratchet
+        entry: python3 scripts/ratchet.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # ---- expos-lint（平台红线机器化闸门，见 scripts/expos_lint.py / 族5 报告 §6）----
+  # error 级命中即 exit 1（红线破坏），warn 打印不挡，preview 默认关（--preview 才跑）。
+  - repo: local
+    hooks:
+      - id: expos-lint
+        name: expos-lint
+        entry: python3 scripts/expos_lint.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

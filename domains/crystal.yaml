@@ -1,0 +1,46 @@
+# 主演示域：安全盐类水溶液蒸发结晶（6×8 孔板，图像法晶体质量指数）
+# 换域只换本文件 + adapter 注册，内核零改动（ARCHITECTURE §2/§3）
+name: crystal
+adapter: sim_crystal
+
+objective:
+  name: single_crystal_quality
+  metric: quality_index
+  direction: maximize
+  description: >-
+    CSD 三要素组合（低成核密度 × 大平均晶粒 × 窄分布 CV，覆盖率辅助）；
+    组合方式为工程构造，物理依据见 REFERENCE_MAP §9.5/§11.2。
+
+design_space:
+  name: crystal
+  variables:
+    - {name: supersaturation, kind: continuous, low: 1.05, high: 1.6, unit: "S"}
+    - {name: additive_frac, kind: continuous, low: 1.0e-4, high: 1.0e-2, transform: log, unit: "w/w"}
+    - {name: cool_rate, kind: continuous, low: 0.1, high: 2.0, unit: "K/h"}
+    - {name: seeded, kind: categorical, choices: [0, 1]}
+
+restrictions:
+  - {name: safe_supersaturation, kind: range, params: {var: supersaturation, max: 1.6}}
+
+plate: {rows: 6, cols: 8}
+replicates: 2
+
+sentinel:
+  n: 5
+  params: {supersaturation: 1.15, additive_frac: 1.0e-3, cool_rate: 1.0, seeded: 0}
+  expected_band: [0.05, 0.45]   # 加载后经模拟器标定复核（tests/test_adapters.py）
+
+metric_range: [0.0, 1.2]
+
+simulator:
+  noise_sd: 0.02
+  artifact_scenario:
+    # 常驻：弱 AR(1) 仪器漂移（REFERENCE_MAP §11.3）
+    - {injector: instrument_drift, params: {mode: ar1, phi: 0.95, sigma: 0.004}}
+    # 第 3 轮：强边缘蒸发——"假最优"事件（demo 第一幕）
+    - {round: 3, injector: edge_evaporation, params: {strength: 0.5, decay_wells: 1.0}}
+    # 常驻低概率眩光（ε-contamination 温和档）
+    - {injector: glare, params: {prob: 0.06, boost: 0.35}}
+
+budget: {wells_total: 384, rounds_total: 8}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}

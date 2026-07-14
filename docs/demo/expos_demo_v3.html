@@ -1,0 +1,733 @@
+<title>expos — The Result Changed the Knowledge</title>
+<style>
+/* ============ tokens: committed single dark theme (instrument film) ============ */
+:root{
+  --ground:#0B1016; --panel:#121A24; --panel2:#0F1620; --hair:#223140;
+  --ink:#E8EEF4; --ink2:#93A4B5; --ink3:#5C6E7F;
+  --know:#4FD8C4;          /* knowledge / fingerprints */
+  --wet:#F5A94B;           /* wet evidence */
+  --dry:#6FA8E8;           /* dry computation */
+  --ok:#55C97A; --bad:#E4655F; --insuf:#8B98A6;
+  --mono:ui-monospace,'SF Mono','Cascadia Mono','JetBrains Mono',Menlo,Consolas,monospace;
+  --disp:'Futura','Avenir Next','Century Gothic','Trebuchet MS',system-ui,sans-serif;
+  --body:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-family:var(--body);overflow:hidden}
+*{box-sizing:border-box}
+
+/* ============ stage: 16:9, scaled to viewport ============ */
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;width:1280px;height:720px;transform-origin:center;background:var(--ground);overflow:hidden}
+
+/* scenes stack */
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .7s ease;padding:64px 84px 96px}
+.scene.active{opacity:1;pointer-events:auto}
+.scene .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink3)}
+.scene h2{font-family:var(--disp);font-weight:600;font-size:30px;letter-spacing:.01em;margin:.35em 0 .8em;text-wrap:balance}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.small{font-size:13px;color:var(--ink2)}
+
+/* generic card */
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:6px;padding:18px 22px}
+.hairline{border-top:1px solid var(--hair)}
+
+/* staged reveals inside an active scene */
+.rv{opacity:0;transform:translateY(8px)}
+.active .rv{animation:rise .55s ease forwards}
+.active .d1{animation-delay:.15s}.active .d2{animation-delay:.7s}.active .d3{animation-delay:1.4s}
+.active .d4{animation-delay:2.2s}.active .d5{animation-delay:3.1s}.active .d6{animation-delay:4.2s}
+.active .d7{animation-delay:5.4s}.active .d8{animation-delay:6.8s}.active .d9{animation-delay:8.4s}
+.active .d10{animation-delay:10.5s}.active .d11{animation-delay:12.5s}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .rv{opacity:1 !important;transform:none !important;animation:none !important}
+  .scene{transition:none}
+}
+
+/* ============ S0 cold open ============ */
+#s0{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#s0 .q{font-family:var(--disp);font-size:40px;font-weight:600;max-width:900px;line-height:1.25;text-wrap:balance}
+#s0 .q em{color:var(--know);font-style:normal}
+#s0 .claim{margin-top:44px}
+.claimchip{display:inline-block;background:var(--panel);border:1px solid var(--hair);border-radius:6px;
+  padding:14px 26px;font-family:var(--mono);font-size:16px}
+.claimchip .lab{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+
+/* honesty badge — persistent from 0:07 */
+#honesty{position:absolute;right:20px;bottom:64px;z-index:40;font-family:var(--mono);font-size:11px;
+  color:var(--ink3);background:rgba(18,26,36,.85);border:1px solid var(--hair);border-radius:5px;
+  padding:8px 12px;line-height:1.7;opacity:0;transition:opacity .8s}
+#honesty.show{opacity:1}
+#honesty b{color:var(--ink2);font-weight:600}
+
+/* source badge — reproducibility provenance, per-hero (left/bottom) */
+#source{position:absolute;left:20px;bottom:64px;z-index:40;font-family:var(--mono);font-size:11px;
+  color:var(--ink3);background:rgba(18,26,36,.85);border:1px solid var(--hair);border-radius:5px;
+  padding:8px 12px;line-height:1.7;max-width:400px;opacity:0;transition:opacity .8s}
+#source.show{opacity:1}
+#source b{color:var(--ink2);font-weight:600}
+
+/* ============ S1 goal ============ */
+.goalbox{max-width:760px}
+.goalbox .prompt{font-family:var(--mono);font-size:20px;color:var(--ink);background:var(--panel);
+  border:1px solid var(--hair);border-left:3px solid var(--know);border-radius:4px;padding:20px 26px}
+.kv{display:grid;grid-template-columns:190px 1fr;gap:6px 18px;font-family:var(--mono);font-size:14px;margin-top:8px}
+.kv dt{color:var(--ink3)} .kv dd{margin:0;color:var(--ink)}
+.fp{color:var(--know)}
+.ranklist{display:flex;flex-direction:column;gap:8px;margin-top:6px;font-family:var(--mono);font-size:16px}
+.rankrow{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--hair);
+  border-radius:5px;padding:10px 16px;width:390px}
+.rankrow .n{color:var(--ink3);width:18px}
+.rankrow .acq{margin-left:auto;color:var(--ink2);font-size:13px}
+
+/* ============ S2 protocol ============ */
+.protwrap{display:flex;gap:40px;align-items:flex-start}
+.protcard{width:400px}
+.protcard .title{font-family:var(--mono);font-size:15px;color:var(--ink)}
+.legs{display:flex;gap:22px;margin-top:22px}
+.leg{flex:1;border:1px solid var(--hair);border-radius:6px;padding:14px 16px;background:var(--panel2);font-family:var(--mono);font-size:13px}
+.leg.dryleg{border-top:3px solid var(--dry)} .leg.wetleg{border-top:3px solid var(--wet)}
+.leg .lt{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.intent{font-family:var(--disp);font-size:19px;color:var(--ink2);text-align:center;margin:14px 0 4px}
+.arrowdown{width:1px;height:26px;background:var(--hair);margin:0 auto}
+
+/* ============ S3 dry queue ============ */
+table.q{border-collapse:collapse;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;min-width:640px}
+table.q th{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);text-align:left;
+  padding:8px 22px 8px 0;border-bottom:1px solid var(--hair);font-weight:500}
+table.q td{padding:11px 22px 11px 0;border-bottom:1px solid var(--hair)}
+.state{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--hair);color:var(--ink2)}
+.state.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+.termstamp{margin-top:18px;background:#070B10;border:1px solid var(--hair);border-radius:5px;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink2);padding:12px 16px;max-width:640px;line-height:1.7}
+.termstamp .ok{color:var(--ok)}
+.dipole{color:var(--dry)}
+
+/* ============ S4 promotion ============ */
+.gates{display:flex;gap:10px;font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin-bottom:14px}
+.gates span{border:1px solid var(--hair);border-radius:99px;padding:4px 12px}
+.promorow{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:16px;
+  background:var(--panel);border:1px solid var(--hair);border-radius:5px;padding:12px 18px;width:560px;margin-bottom:9px}
+.verdict{margin-left:auto;font-size:13px;letter-spacing:.06em}
+.verdict.pro{color:var(--ok)} .verdict.den{color:var(--ink3)}
+.gatedots{display:flex;gap:5px}
+.gd{width:8px;height:8px;border-radius:50%;background:var(--ok)} .gd.x{background:var(--bad)}
+.promonote{font-family:var(--disp);font-size:18px;color:var(--ink2);margin-top:20px}
+.promonote b{color:var(--ink);font-weight:600}
+
+/* ============ S5 wet plate ============ */
+.wetwrap{display:flex;gap:48px;align-items:flex-start}
+.plate{display:grid;grid-template-columns:repeat(6,44px);grid-auto-rows:44px;gap:7px;
+  background:var(--panel2);border:1px solid var(--hair);border-radius:8px;padding:18px}
+.well{border-radius:50%;border:1px solid var(--hair);background:var(--ground);position:relative}
+.well.lit{background:color-mix(in srgb,var(--wet) 55%,var(--ground));border-color:var(--wet)}
+.well.ctl.lit{background:color-mix(in srgb,var(--ink2) 40%,var(--ground));border-color:var(--ink2)}
+.wetsteps{font-family:var(--mono);font-size:14px;line-height:2.2;color:var(--ink3)}
+.wetsteps .on{color:var(--ink)}
+.wetsteps .tick{color:var(--ok);margin-right:8px}
+
+/* ============ S6 evidence (hero 1) ============ */
+.evgrid{display:flex;gap:52px;align-items:flex-start}
+.evstack{font-family:var(--mono);font-size:13px;color:var(--ink3);line-height:2.1;min-width:210px}
+.evstack .lvl{color:var(--ink2)}
+.evfig{flex:1}
+.evnum{display:flex;gap:44px;font-family:var(--mono);font-size:15px;margin-top:20px}
+.evnum .b{display:block;font-size:26px;color:var(--ink);margin-top:2px}
+.decision{margin-top:26px;font-family:var(--disp);font-size:24px;letter-spacing:.04em}
+.decision .sup{color:var(--ok)}
+svg text{font-family:var(--mono)}
+
+/* ============ S7 ledger (hero 2) ============ */
+.ledgerwrap{display:flex;gap:36px;align-items:center;justify-content:center;margin-top:10px}
+.claimcard{width:360px;background:var(--panel);border:1px solid var(--hair);border-radius:8px;padding:22px 26px;font-family:var(--mono)}
+.claimcard .ver{font-size:11px;letter-spacing:.2em;color:var(--ink3);text-transform:uppercase}
+.claimcard .stmt{font-size:15px;margin:12px 0 16px;line-height:1.6;color:var(--ink)}
+.claimcard .st{font-size:13px}
+.st.open{color:var(--ink3)} .st.sup{color:var(--ok)}
+.claimcard .sup-line{font-size:11.5px;color:var(--ink3);margin-top:14px}
+.ledarrow{font-size:26px;color:var(--ink3)}
+.fps{margin-top:34px;display:flex;gap:70px;justify-content:center;font-family:var(--mono);font-size:13px}
+.fps .lab{color:var(--ink3);display:block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px}
+.fpmorph{color:var(--know);font-size:15px}
+.fpold{color:var(--ink3);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--ink3) 60%,transparent)}
+
+/* ============ S8 round 2 ============ */
+.cmp{display:flex;gap:70px;margin-top:6px}
+.cmpcol{width:400px}
+.cmpcol .ch{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.cmpcol .ch .f{color:var(--know)}
+.bigline{margin-top:34px;font-family:var(--disp);font-size:24px;line-height:1.5;text-wrap:balance;max-width:860px}
+.bigline b{color:var(--know);font-weight:600}
+.deniedflip{outline:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
+.promoflip{outline:1px solid color-mix(in srgb,var(--ok) 45%,transparent)}
+
+/* ============ S9 four conditions ============ */
+.worlds{display:flex;gap:22px}
+.world{flex:1;background:var(--panel);border:1px solid var(--hair);border-radius:8px;padding:20px 22px;font-family:var(--mono);font-size:13.5px;line-height:2.05}
+.world .wt{font-family:var(--disp);font-size:17px;letter-spacing:.03em;margin-bottom:10px}
+.world.cons .wt{color:var(--ok)} .world.flip .wt{color:var(--bad)} .world.flat .wt{color:var(--insuf)}
+.world .num{color:var(--ink)}
+.world .res{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair)}
+.worldline{margin-top:26px;font-family:var(--disp);font-size:20px;color:var(--ink2);text-align:center}
+.worldline b{color:var(--ink);font-weight:600}
+
+/* ============ S10 recovery ============ */
+.recflow{display:flex;align-items:center;gap:16px;font-family:var(--mono);font-size:15px;margin:14px 0}
+.recstate{border:1px solid var(--hair);border-radius:5px;padding:10px 18px;background:var(--panel)}
+.recstate.warn{border-color:var(--wet);color:var(--wet)}
+.recstate.okc{border-color:var(--ok);color:var(--ok)}
+.recstate.badc{border-color:var(--bad);color:var(--bad)}
+.recarrow{color:var(--ink3)}
+.reclab{font-family:var(--mono);font-size:11.5px;color:var(--ink3);margin:4px 0 18px}
+
+/* ============ S11 close ============ */
+#s11{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.loop{font-family:var(--mono);font-size:19px;line-height:2.3;color:var(--ink2)}
+.loop .hot{color:var(--know)}
+.brand{font-family:var(--disp);font-size:30px;margin-top:40px;font-weight:600}
+.brand small{display:block;font-size:15px;color:var(--ink2);font-weight:400;margin-top:10px;max-width:720px}
+.finelines{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-top:30px;line-height:2}
+
+/* ============ sA domain swap (existence proof) ============ */
+.swapwrap{display:flex;gap:0;align-items:stretch;margin-top:6px}
+.swapcard{flex:1;background:var(--panel);border:1px solid var(--hair);border-radius:8px;padding:18px 22px;font-family:var(--mono);font-size:13px;line-height:1.95}
+.swapcard.left{border-top:3px solid var(--dry)} .swapcard.right{border-top:3px solid var(--wet)}
+.swapcard .dh{font-family:var(--disp);font-size:18px;letter-spacing:.02em;margin-bottom:3px}
+.swapcard.left .dh{color:var(--dry)} .swapcard.right .dh{color:var(--wet)}
+.swapcard .dsub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.swapcard .row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--hair) 55%,transparent)}
+.swapcard .row:last-child{border-bottom:none}
+.swapcard .row .k{color:var(--ink3)} .swapcard .row .v{color:var(--ink);text-align:right}
+.swapcard .v.sup{color:var(--ok)} .swapcard .v.bad{color:var(--bad)} .swapcard .v.fp{color:var(--know)}
+.swapband{width:184px;flex:0 0 184px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:0 8px;position:relative}
+.swapband::before,.swapband::after{content:'';position:absolute;top:50%;width:22px;height:1px;background:var(--hair)}
+.swapband::before{left:-11px} .swapband::after{right:-11px}
+.swapband .core{font-family:var(--mono);font-size:12.5px;color:var(--ink2);line-height:2.05;
+  border:1px dashed color-mix(in srgb,var(--know) 45%,var(--hair));border-radius:8px;padding:16px 12px;width:100%;background:var(--panel2)}
+.swapband .core b{color:var(--ink);font-weight:600}
+.swapband .zero{display:block;margin-top:12px;font-size:11px;letter-spacing:.10em;color:var(--know);text-transform:uppercase}
+.swaptestimony{margin-top:22px;font-family:var(--disp);font-size:19px;color:var(--ink2);line-height:1.5;text-wrap:balance;max-width:1000px}
+.swaptestimony b{color:var(--ink);font-weight:600}
+
+/* ============ sB governed & provenance-complete ============ */
+.govlist{display:flex;flex-direction:column;gap:18px;margin-top:14px;max-width:940px}
+.govrow{display:flex;align-items:flex-start;gap:20px;background:var(--panel);border:1px solid var(--hair);
+  border-left:3px solid var(--know);border-radius:6px;padding:18px 24px}
+.govrow .ic{font-family:var(--disp);font-size:22px;color:var(--know);min-width:30px;line-height:1.1}
+.govrow .txt{font-family:var(--disp);font-size:21px;color:var(--ink);line-height:1.4;text-wrap:balance}
+.govrow .tag{display:block;font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--ink3);margin-top:7px;text-transform:none}
+
+/* ============ chrome: timeline ============ */
+#chrome{position:absolute;left:0;right:0;bottom:0;height:52px;display:flex;align-items:center;gap:14px;
+  padding:0 20px;background:linear-gradient(transparent, rgba(7,11,16,.92) 30%);z-index:50}
+#playbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--hair);background:var(--panel);
+  color:var(--ink);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+#playbtn:focus-visible{outline:2px solid var(--know);outline-offset:2px}
+#bar{flex:1;height:26px;display:flex;align-items:center;cursor:pointer;position:relative}
+#track{width:100%;height:3px;background:var(--hair);border-radius:2px;position:relative}
+#fill{position:absolute;left:0;top:0;bottom:0;background:var(--know);border-radius:2px;width:0%}
+.chap{position:absolute;top:-4px;width:1.5px;height:11px;background:var(--ink3);opacity:.6}
+#tlabel{font-family:var(--mono);font-size:12px;color:var(--ink3);min-width:88px;text-align:right}
+#cut{font-family:var(--mono);font-size:11px;color:var(--ink3);border:1px solid var(--hair);
+  background:var(--panel);border-radius:99px;padding:4px 12px;cursor:pointer}
+#cut.on{color:var(--know);border-color:var(--know)}
+#scenename{position:absolute;left:20px;top:14px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink3);z-index:40}
+</style>
+
+<div id="viewport"><div id="stage">
+  <div id="scenename"></div>
+
+  <!-- honesty badge -->
+  <div id="honesty">
+    <b>Dry:</b> real PySCF &nbsp;·&nbsp; <b>Wet:</b> simulated instrument<br>
+    <b>Agent:</b> deterministic by default &nbsp;·&nbsp; hardware not yet connected
+  </div>
+
+  <!-- source / provenance badge -->
+  <div id="source"></div>
+
+  <!-- S0 cold open -->
+  <section class="scene" id="s0">
+    <div class="q rv d1">Can an experiment change what an AI <em>believes</em> —<br>and change what it does next?</div>
+    <div class="claim rv d3">
+      <span class="claimchip"><span class="lab">Round-1 claim</span>
+        “Higher-polarity candidates produce a stronger response.”</span>
+    </div>
+  </section>
+
+  <!-- S1 research goal -->
+  <section class="scene" id="s1">
+    <div class="kicker">01 · Propose</div>
+    <h2>A research goal, a knowledge state, a proposal</h2>
+    <div class="goalbox">
+      <div class="prompt rv d1">Identify which solvent region produces the strongest response.</div>
+      <dl class="kv rv d2" style="margin-top:22px">
+        <dt>Current claim</dt><dd>polar response is stronger · <span style="color:var(--ink2)">SUPPORTED (seed)</span></dd>
+        <dt>Knowledge fingerprint</dt><dd class="fp">003cae6f…32df</dd>
+      </dl>
+      <div class="ranklist">
+        <div class="rankrow rv d3"><span class="n">1</span> ethanol <span class="acq">acq 0.83</span></div>
+        <div class="rankrow rv d4"><span class="n">2</span> acetonitrile <span class="acq">acq 0.79</span></div>
+        <div class="rankrow rv d5"><span class="n">3</span> acetone <span class="acq">acq 0.61</span></div>
+        <div class="rankrow rv d6"><span class="n">4</span> hexane <span class="acq">acq 0.55</span></div>
+      </div>
+      <p class="small rv d7" style="margin-top:18px">Structured output only: hypothesis · candidate ranking · evidence basis · consumed knowledge fingerprint.</p>
+    </div>
+  </section>
+
+  <!-- S2 protocol -->
+  <section class="scene" id="s2">
+    <div class="kicker">02 · Compile</div>
+    <h2>One scientific intent, two executable targets</h2>
+    <div class="protwrap">
+      <div class="protcard card rv d1">
+        <div class="title">ProtocolSpec</div>
+        <div class="intent rv d2">one scientific intent</div>
+        <div class="arrowdown rv d2"></div>
+        <div class="legs">
+          <div class="leg dryleg rv d3"><div class="lt">DryJobPlan</div>PySCF input cards<br>HF / STO-3G<br>per-candidate jobs</div>
+          <div class="leg wetleg rv d3"><div class="lt">WetProtocolPlan</div>Opentrons-compatible<br>deck + transfers<br>sample custody ids</div>
+        </div>
+        <dl class="kv rv d4" style="margin-top:20px">
+          <dt>Protocol fingerprint</dt><dd class="fp">71409505…6758</dd>
+          <dt>Validation</dt><dd style="color:var(--ok)">passed — labware, volumes, deck</dd>
+        </dl>
+      </div>
+      <p class="small rv d5" style="max-width:330px;line-height:1.9">The agent never calls a script directly. It proposes; the compiler produces a verifiable, traceable experiment object — fingerprinted before anything runs.</p>
+    </div>
+  </section>
+
+  <!-- S3 dry -->
+  <section class="scene" id="s3">
+    <div class="kicker">03 · Compute</div>
+    <h2>Real quantum-chemistry jobs, out of process</h2>
+    <table class="q">
+      <tr><th>Candidate</th><th>Engine</th><th>State</th><th>polarity_proxy (D)</th></tr>
+      <tr class="rv d1"><td>ethanol</td><td>PySCF</td><td><span class="state done">SUCCEEDED</span></td><td class="dipole">1.419</td></tr>
+      <tr class="rv d2"><td>acetonitrile</td><td>PySCF</td><td><span class="state done">SUCCEEDED</span></td><td class="dipole">3.064</td></tr>
+      <tr class="rv d3"><td>acetone</td><td>PySCF</td><td><span class="state done">SUCCEEDED</span></td><td class="dipole">1.914</td></tr>
+      <tr class="rv d4"><td>hexane</td><td>PySCF</td><td><span class="state done">SUCCEEDED</span></td><td class="dipole">0.012</td></tr>
+    </table>
+    <div class="termstamp rv d5">$ python -m expos.adapters.dry.worker jobs/demo_ethanol<br>
+converged SCF energy = -152.13… &nbsp;<span class="ok">SCF converged</span> · dipole 1.419 D · exit 0</div>
+    <p class="small rv d6">Every job is a separate process with submit / poll / collect / cancel — a crash is a classified failure, never a hung loop.</p>
+  </section>
+
+  <!-- S4 promotion -->
+  <section class="scene" id="s4">
+    <div class="kicker">04 · Promote</div>
+    <h2>Evidence-gated Dry→Wet promotion</h2>
+    <div class="gates rv d1"><span>converged</span><span>feasible window</span><span>evidence rank</span><span>wet budget</span></div>
+    <div class="promorow rv d2">ethanol <span class="gatedots"><span class="gd"></span><span class="gd"></span><span class="gd"></span><span class="gd"></span></span><span class="verdict pro">PROMOTED</span></div>
+    <div class="promorow rv d3">acetonitrile <span class="gatedots"><span class="gd"></span><span class="gd"></span><span class="gd"></span><span class="gd"></span></span><span class="verdict pro">PROMOTED</span></div>
+    <div class="promorow rv d4">acetone <span class="gatedots"><span class="gd"></span><span class="gd"></span><span class="gd x"></span><span class="gd"></span></span><span class="verdict den">DENIED — gate_rank</span></div>
+    <div class="promorow rv d5">hexane <span class="gatedots"><span class="gd"></span><span class="gd x"></span><span class="gd"></span><span class="gd"></span></span><span class="verdict den">DENIED — gate_window</span></div>
+    <div class="promonote rv d6">Every candidate that was <b>not</b> chosen carries a recorded reason.<br><span class="small">No silent edge — denial is evidence too.</span></div>
+  </section>
+
+  <!-- S5 wet -->
+  <section class="scene" id="s5">
+    <div class="kicker">05 · Experiment</div>
+    <h2>Opentrons-compatible protocol, simulated instrument</h2>
+    <div class="wetwrap">
+      <div class="plate rv d1" id="plate"></div>
+      <div>
+        <div class="wetsteps">
+          <div class="rv d2"><span class="tick">✓</span><span class="on">protocol validation</span> — real Opentrons simulate stack</div>
+          <div class="rv d3"><span class="tick">✓</span><span class="on">deck layout</span> — labware from external definition</div>
+          <div class="rv d4"><span class="tick">✓</span><span class="on">liquid transfer</span> — per-well sample custody</div>
+          <div class="rv d5"><span class="tick">✓</span><span class="on">plate reading</span> — solvent_response</div>
+        </div>
+        <p class="small rv d6" style="max-width:330px;margin-top:22px">Simulated wet instrumentation — clearly labelled, never presented as physical hardware. Every reading carries a four-segment custody chain: protocol → deck → measurement → raw.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- S6 evidence HERO -->
+  <section class="scene" id="s6">
+    <div class="kicker">06 · Certify</div>
+    <h2>Evidence certification — sequential, anytime-valid</h2>
+    <div class="evgrid">
+      <div class="evstack">
+        <div class="rv d1">trusted observations</div>
+        <div class="rv d1" style="color:var(--hair)">│</div>
+        <div class="rv d2 lvl">effect estimate</div>
+        <div class="rv d2" style="color:var(--hair)">│</div>
+        <div class="rv d3 lvl">confidence sequence</div>
+        <div class="rv d3" style="color:var(--hair)">│</div>
+        <div class="rv d4 lvl">e-product</div>
+      </div>
+      <div class="evfig">
+        <svg viewBox="0 0 560 120" width="560" height="120" role="img" aria-label="Effect point above zero; e-product far beyond threshold on a log scale">
+          <!-- effect row: point estimate above zero, no interval drawn (e-value path decisive) -->
+          <text x="8" y="34" fill="#5C6E7F" font-size="11">effect</text>
+          <line x1="150" y1="12" x2="150" y2="50" stroke="#223140" stroke-width="1"/>
+          <text x="150" y="63" fill="#5C6E7F" font-size="10" text-anchor="middle">0</text>
+          <g class="rv d3">
+            <circle cx="322" cy="31" r="5" fill="#F5A94B"/>
+            <text x="322" y="18" fill="#E8EEF4" font-size="12" text-anchor="middle">+0.319</text>
+          </g>
+          <!-- e-product row: log-scaled count bar, threshold marker at 20 -->
+          <text x="8" y="98" fill="#5C6E7F" font-size="11">e-product</text>
+          <text x="150" y="112" fill="#5C6E7F" font-size="9" text-anchor="middle">1</text>
+          <g class="rv d4">
+            <rect x="150" y="86" width="322" height="13" rx="2" fill="#55C97A" opacity="0.85"/>
+            <line x1="254" y1="80" x2="254" y2="106" stroke="#E8EEF4" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="254" y="76" fill="#5C6E7F" font-size="9" text-anchor="middle">threshold 20</text>
+            <text x="482" y="97" fill="#E8EEF4" font-size="11">10451.9</text>
+          </g>
+        </svg>
+        <div class="evnum">
+          <div class="rv d4"><span class="small">e-product</span><span class="b">10451.9 <span class="small" style="font-size:13px">/ threshold 20</span></span></div>
+          <div class="rv d4"><span class="small">confounding check</span><span class="b" style="color:var(--ok)">PASS</span></div>
+          <div class="rv d4"><span class="small">evidence band</span><span class="b">STRONG</span></div>
+        </div>
+        <div class="decision rv d5">Decision: <span class="sup">SUPPORTED</span></div>
+        <p class="small rv d6" style="max-width:520px;margin-top:16px">The system does not repeatedly check whether p&nbsp;&lt;&nbsp;0.05. It accumulates sequential evidence that stays valid as the loop continues — and it refuses to conclude from confounded plates.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- S7 ledger HERO -->
+  <section class="scene" id="s7">
+    <div class="kicker">07 · Update knowledge</div>
+    <h2>The claim ledger changes — append-only, versioned</h2>
+    <div class="ledgerwrap">
+      <div class="claimcard rv d1">
+        <span class="ver">Claim · v1</span>
+        <div class="stmt">polar response is stronger</div>
+        <div class="st open">STATUS: OPEN (seed)</div>
+      </div>
+      <div class="ledarrow rv d2">→</div>
+      <div class="claimcard rv d3" style="border-color:color-mix(in srgb,var(--bad) 55%,var(--hair))">
+        <span class="ver">Claim · v2</span>
+        <div class="stmt">polar response is stronger</div>
+        <div class="st" style="color:var(--bad)">STATUS: REJECTED · e 10451.9 · effect −0.086</div>
+        <div class="sup-line">supersedes: v1 · wet evidence overturned the seed claim</div>
+      </div>
+    </div>
+    <div class="fps">
+      <div class="rv d4"><span class="lab">Knowledge fingerprint</span>
+        <span class="fpold">003cae6f…32df</span> &nbsp;→&nbsp; <span class="fpmorph" id="fpm">809ca7a1…</span></div>
+    </div>
+    <p class="small rv d5" style="text-align:center;margin-top:26px">Wet evidence rejected the seed claim. The knowledge state moved to a new, hash-addressed version — the seed belief did not survive contact with the plate, and nothing was rewritten in place.</p>
+  </section>
+
+  <!-- S8 round 2 -->
+  <section class="scene" id="s8">
+    <div class="kicker">08 · Round two</div>
+    <h2>The new knowledge changes the next experiment</h2>
+    <div class="cmp">
+      <div class="cmpcol rv d1">
+        <div class="ch">Round 1 · consumed <span class="f">003cae6f…</span></div>
+        <div class="ranklist">
+          <div class="rankrow"><span class="n">1</span> ethanol <span class="verdict pro" style="font-size:12px">PROMOTED</span></div>
+          <div class="rankrow"><span class="n">2</span> acetonitrile <span class="verdict pro" style="font-size:12px">PROMOTED</span></div>
+          <div class="rankrow"><span class="n">3</span> acetone <span class="verdict den" style="font-size:12px">gate_rank</span></div>
+        </div>
+      </div>
+      <div class="cmpcol rv d3">
+        <div class="ch">Round 2 · consumed <span class="f">c2a0d299…</span></div>
+        <div class="ranklist">
+          <div class="rankrow promoflip"><span class="n">1</span> acetone <span class="verdict pro" style="font-size:12px">PROMOTED</span></div>
+          <div class="rankrow"><span class="n">2</span> acetonitrile <span class="verdict pro" style="font-size:12px">PROMOTED</span></div>
+          <div class="rankrow deniedflip"><span class="n">3</span> ethanol <span class="verdict den" style="font-size:12px">gate_rank</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bigline rv d5">The experiment did not merely produce data.<br><b>It changed the next experiment.</b></div>
+    <p class="small rv d6" style="max-width:840px;margin-top:16px">Rejecting “polar higher” alone does not assert its mirror — the behavioural flip requires the mirror claim, exercised in the K-E acceptance substrate.</p>
+  </section>
+
+  <!-- S9 four conditions -->
+  <section class="scene" id="s9">
+    <div class="kicker">09 · Four worlds, one honest system</div>
+    <h2>Knowing when to support, reject — and refuse to conclude</h2>
+    <div class="worlds">
+      <div class="world flat rv d1">
+        <div class="wt">Flat</div>
+        effect <span class="num">0.0</span><br>
+        e-product <span class="num">0.0</span> &lt; 20
+        <div class="res">→ INSUFFICIENT ×4<br>→ knowledge unchanged</div>
+      </div>
+      <div class="world flat rv d2">
+        <div class="wt">Consistent-zero</div>
+        effect <span class="num">+0.0009</span><br>
+        e-product <span class="num">0.62</span> &lt; 20
+        <div class="res">→ INSUFFICIENT ×4<br>→ true null, no false redirect</div>
+      </div>
+      <div class="world cons rv d3">
+        <div class="wt">Consistent-strong</div>
+        effect <span class="num">+0.319</span><br>
+        e-product <span class="num">10451.9</span> ≥ 20
+        <div class="res">→ INSUFFICIENT → SUPPORTED ×3<br>→ agent redirects</div>
+      </div>
+      <div class="world flip rv d4">
+        <div class="wt">Flipped</div>
+        effect <span class="num">−0.086</span><br>
+        e-product <span class="num">10451.9</span> ≥ 20
+        <div class="res">→ INSUFFICIENT → REJECTED ×3<br>→ seed claim overturned</div>
+      </div>
+    </div>
+    <div class="worldline rv d5">Four worlds, one honest adjudication.<br><b>Support, reject, or refuse to conclude — each earned by the same evidence bar.</b></div>
+  </section>
+
+  <!-- sA domain swap — existence proof -->
+  <section class="scene" id="sA">
+    <div class="kicker">10 · Change the science, not the machine</div>
+    <h2>Same kernel. New science.</h2>
+    <div class="swapwrap">
+      <div class="swapcard left rv d1">
+        <div class="dh">solvent_screen</div>
+        <div class="dsub">8 solvents · polarity descriptor</div>
+        <div class="row"><span class="k">dry engine</span><span class="v">real PySCF dipole jobs</span></div>
+        <div class="row"><span class="k">wet observations</span><span class="v">interleaved replicate plates</span></div>
+        <div class="row"><span class="k">verdict</span><span class="v bad">seed claim REJECTED</span></div>
+        <div class="row"><span class="k">effect</span><span class="v">−0.086</span></div>
+        <div class="row"><span class="k">knowledge fp</span><span class="v fp">809ca7a1…</span></div>
+      </div>
+      <div class="swapband rv d2">
+        <div class="core"><b>kernel</b><br>planner<br>qc<br>scheduler
+          <span class="zero">zero bytes changed</span></div>
+      </div>
+      <div class="swapcard right rv d3">
+        <div class="dh">catalyst_screen</div>
+        <div class="dsub">5 ligands · coordinate descriptor</div>
+        <div class="row"><span class="k">dry engine</span><span class="v">10 real PySCF ligand jobs</span></div>
+        <div class="row"><span class="k">wet observations</span><span class="v">32 simulated wet obs</span></div>
+        <div class="row"><span class="k">promotion</span><span class="v">[NH3, PCl3]</span></div>
+        <div class="row"><span class="k">verdict</span><span class="v sup">insufficient → SUPPORTED</span></div>
+        <div class="row"><span class="k">effect</span><span class="v sup">+0.412 <span style="color:var(--ink3)">(analytic +0.43)</span></span></div>
+        <div class="row"><span class="k">e-product</span><span class="v">102.23 <span style="color:var(--ink3)">/ 20</span></span></div>
+        <div class="row"><span class="k">domain knowledge fp</span><span class="v fp">4f087ef9…</span></div>
+      </div>
+    </div>
+    <div class="swaptestimony rv d4">The shape of the change matched the layering's prediction:
+      <b>domains changed at the edges; the kernel did not change at all.</b></div>
+  </section>
+
+  <!-- sB governed & provenance-complete -->
+  <section class="scene" id="sB">
+    <div class="kicker">11 · Governed &amp; provenance-complete</div>
+    <h2>A domain is a package the system can hold to account</h2>
+    <div class="govlist">
+      <div class="govrow rv d1">
+        <div class="ic">§</div>
+        <div class="txt">Domains are governed packages — birth-time contracts, machine-tracked debts.
+          <span class="tag">Domain Contract v2 · five-hook provider ABC · EXP013 machine reconciliation</span></div>
+      </div>
+      <div class="govrow rv d2">
+        <div class="ic">#</div>
+        <div class="txt">Code is part of the configuration — provider drift breaks resume, loudly.
+          <span class="tag">provider source fingerprint folded into config identity · resume raises config_drift</span></div>
+      </div>
+      <div class="govrow rv d3">
+        <div class="ic">✓</div>
+        <div class="txt">Evaluation is reproducible; the system stays blind to its own test answers.
+          <span class="tag">eval-harness provenance layer · truth_profile isolation · AST truth-blind guard</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S10 recovery -->
+  <section class="scene" id="s10">
+    <div class="kicker">12 · When hardware fails</div>
+    <h2>Defined failures pause; unknown failures fail closed</h2>
+    <div class="reclab">injected: E_DEVICE (defined, recoverable) · policy: WaitForRecovery</div>
+    <div class="recflow">
+      <span class="recstate rv d1">EXECUTING</span><span class="recarrow rv d1">→</span>
+      <span class="recstate warn rv d2">AWAITING_RECOVERY</span><span class="recarrow rv d3">→ recover()</span>
+      <span class="recstate rv d3">EXECUTING</span><span class="recarrow rv d4">→</span>
+      <span class="recstate okc rv d4">SUCCEEDED</span>
+    </div>
+    <div class="reclab rv d5">injected: E_UNKNOWN (undefined)</div>
+    <div class="recflow rv d5">
+      <span class="recstate">EXECUTING</span><span class="recarrow">→ bypasses policy</span>
+      <span class="recstate badc">ABORTED · fail-closed</span>
+    </div>
+    <p class="small rv d6" style="max-width:560px">The same driver contract will carry physical instruments later — swap the recovery policy, not the architecture.</p>
+  </section>
+
+  <!-- S11 close -->
+  <section class="scene" id="s11">
+    <div class="loop rv d1">
+      PROPOSE<br><span style="color:var(--hair)">↓</span><br>
+      COMPUTE<br><span style="color:var(--hair)">↓</span><br>
+      EXPERIMENT<br><span style="color:var(--hair)">↓</span><br>
+      <span class="hot">CERTIFY</span><br><span style="color:var(--hair)">↓</span><br>
+      <span class="hot">UPDATE&nbsp;KNOWLEDGE</span><br>
+      <span style="color:var(--hair)">↺</span>
+    </div>
+    <div class="brand rv d3">expos
+      <small>a domain-swappable, provenance-complete adaptive scientific runtime</small>
+    </div>
+    <div class="finelines rv d4">
+      real dry computation · trusted simulated wet instrumentation · domain-swappable (2 domains, kernel untouched)<br>
+      LLM backend validated (live/shadow/active), deterministic default<br>
+      LLM-driven run reproduces the same verdict: effect +0.3193 (Stage 3, gate-checked)<br>
+      physical hardware not yet connected — real-wet readiness contract in progress
+    </div>
+  </section>
+
+  <!-- chrome -->
+  <div id="chrome">
+    <button id="playbtn" aria-label="Play or pause">▶</button>
+    <div id="bar"><div id="track"><div id="fill"></div></div></div>
+    <div id="tlabel">0:00 / 3:50</div>
+    <button id="cut" title="Play the 90-second cut">90s CUT</button>
+  </div>
+</div></div>
+
+<script>
+/* ---------- real system data (captured from final expos runs, 2026-07-13) ---------- */
+const SCENES = [
+  {id:'s0',  t:0,   name:'cold open'},
+  {id:'s1',  t:10,  name:'propose'},
+  {id:'s2',  t:26,  name:'compile'},
+  {id:'s3',  t:46,  name:'compute · real pyscf'},
+  {id:'s4',  t:66,  name:'promote'},
+  {id:'s5',  t:82,  name:'experiment · simulated wet'},
+  {id:'s6',  t:102, name:'certify · hero'},
+  {id:'s7',  t:124, name:'knowledge update · hero'},
+  {id:'s8',  t:140, name:'round two'},
+  {id:'s9',  t:158, name:'four worlds'},
+  {id:'sA',  t:178, name:'domain swap · existence proof'},
+  {id:'sB',  t:196, name:'governed & provenance-complete'},
+  {id:'s10', t:208, name:'failure & recovery'},
+  {id:'s11', t:220, name:'expos'},
+];
+const TOTAL = 230;
+const SHORT = ['s0','s1','s4','s6','s7','s8','sA','s11'];   // 90-second cut (+ domain swap)
+const SHORT_DUR = {s0:8, s1:14, s4:12, s6:18, s7:14, s8:16, sA:12, s11:10};
+
+/* ---------- per-hero provenance (frozen: every number traces to a final run) ---------- */
+const SOURCE = {
+  s6:'Source: runs/corun_consistent_strong · seed=7 · rounds=4 · replicates=8 · Gate 12: CHAIN COMPLETE',
+  s7:'Source: runs/corun_flipped · seed=7 · rounds=4 · replicates=8 · Gate 12: CHAIN COMPLETE',
+  s8:'Source: K-E mirror-head acceptance run · e_product=102 · seed=7',
+  s9:'Source: four-condition co-run (Slurm 4670049-52) · all Gate 12 CHAIN COMPLETE',
+  sA:'Source: runs/m20_catalyst_full_loop · seed=7 · rounds=2 · replicates=8 · Gate 12: CHAIN COMPLETE',
+  sB:'Domain Contract v2 + provenance batches · countersigned 2026-07-13',
+};
+
+/* ---------- plate build ---------- */
+const plate = document.getElementById('plate');
+const wells = [];
+for (let i=0;i<24;i++){
+  const w = document.createElement('div');
+  w.className = 'well' + (i===14 ? ' ctl' : '');
+  plate.appendChild(w); wells.push(w);
+}
+
+/* ---------- engine ---------- */
+const stage = document.getElementById('stage');
+const fill = document.getElementById('fill');
+const tlabel = document.getElementById('tlabel');
+const playbtn = document.getElementById('playbtn');
+const scenename = document.getElementById('scenename');
+const honesty = document.getElementById('honesty');
+const source = document.getElementById('source');
+const cutBtn = document.getElementById('cut');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let mode = 'full';           // 'full' | 'short'
+let t = 0, playing = false, last = null, raf = null;
+let litCount = 0;
+
+function sceneList(){ return mode==='full' ? SCENES : SHORT.map((id,i)=>{
+  let acc = 0; for (let j=0;j<i;j++) acc += SHORT_DUR[SHORT[j]];
+  return {id, t: acc, name: SCENES.find(s=>s.id===id).name};
+});}
+function total(){ return mode==='full' ? TOTAL : SHORT.reduce((a,id)=>a+SHORT_DUR[id],0); }
+
+function currentScene(){
+  const list = sceneList();
+  let cur = list[0];
+  for (const s of list) if (t >= s.t) cur = s;
+  return cur;
+}
+let activeId = null;
+function render(){
+  const list = sceneList();
+  const cur = currentScene();
+  if (cur.id !== activeId){
+    activeId = cur.id;
+    document.querySelectorAll('.scene').forEach(el=>{
+      const on = el.id === cur.id;
+      if (on && !el.classList.contains('active')){
+        // restart intra-scene reveals
+        el.classList.remove('active'); void el.offsetWidth; el.classList.add('active');
+      } else if (!on) el.classList.remove('active');
+    });
+    scenename.textContent = cur.name;
+    if (cur.id === 's5'){ litCount = 0; wells.forEach(w=>w.classList.remove('lit')); }
+  }
+  honesty.classList.toggle('show', t >= 6 && cur.id !== 's11');
+  // per-hero source badge: show mapped provenance, hide on unmapped scenes
+  const src = SOURCE[cur.id];
+  if (src){ source.textContent = src; source.classList.add('show'); }
+  else source.classList.remove('show');
+  // plate wells light progressively during s5
+  if (cur.id === 's5'){
+    const dur = mode==='full' ? 20 : 12;
+    const local = t - cur.t;
+    const want = Math.min(24, Math.floor((local/dur)*26));
+    while (litCount < want){ wells[litCount].classList.add('lit'); litCount++; }
+  }
+  fill.style.width = (100 * t / total()) + '%';
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  const tm = Math.floor(total()/60), ts = Math.floor(total()%60);
+  tlabel.textContent = `${m}:${String(s).padStart(2,'0')} / ${tm}:${String(ts).padStart(2,'0')}`;
+}
+function tick(now){
+  if (!playing) return;
+  if (last == null) last = now;
+  t += (now - last)/1000; last = now;
+  if (t >= total()){ t = total(); pause(); }
+  render();
+  if (playing) raf = requestAnimationFrame(tick);
+}
+function play(){ if (playing) return; if (t >= total()) t = 0; playing = true; last = null;
+  playbtn.textContent = '❚❚'; raf = requestAnimationFrame(tick); }
+function pause(){ playing = false; playbtn.textContent = '▶'; if (raf) cancelAnimationFrame(raf); }
+playbtn.addEventListener('click', ()=> playing ? pause() : play());
+
+/* seek */
+const bar = document.getElementById('bar');
+bar.addEventListener('click', e=>{
+  const r = bar.getBoundingClientRect();
+  t = total() * Math.min(1, Math.max(0, (e.clientX - r.left)/r.width));
+  activeId = null; render();
+});
+/* chapters on track */
+function drawChapters(){
+  document.querySelectorAll('.chap').forEach(el=>el.remove());
+  const track = document.getElementById('track');
+  for (const s of sceneList()){
+    const c = document.createElement('div'); c.className='chap';
+    c.style.left = (100*s.t/total())+'%'; track.appendChild(c);
+  }
+}
+cutBtn.addEventListener('click', ()=>{
+  mode = mode==='full' ? 'short' : 'full';
+  cutBtn.classList.toggle('on', mode==='short');
+  cutBtn.textContent = mode==='short' ? 'FULL CUT' : '90s CUT';
+  t = 0; activeId = null; drawChapters(); render(); play();
+});
+/* keyboard */
+addEventListener('keydown', e=>{
+  if (e.key === ' '){ e.preventDefault(); playing ? pause() : play(); }
+  if (e.key === 'ArrowRight'){ const l=sceneList(); const nx=l.find(s=>s.t>t+0.5); t = nx?nx.t:total(); activeId=null; render(); }
+  if (e.key === 'ArrowLeft'){ const l=[...sceneList()].reverse(); const pv=l.find(s=>s.t < t-1.5); t = pv?pv.t:0; activeId=null; render(); }
+});
+/* scale stage to viewport */
+function rescale(){
+  const s = Math.min(innerWidth/1280, innerHeight/720);
+  stage.style.transform = `scale(${s})`;
+}
+addEventListener('resize', rescale); rescale();
+drawChapters(); render();
+if (!reduced) setTimeout(play, 600);
+</script>

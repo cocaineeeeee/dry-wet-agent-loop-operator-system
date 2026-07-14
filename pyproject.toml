@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expos"
+version = "0.1.0"
+description = "expos —— 域中立的自适应「干–湿–agent」科学闭环研究 OS；化学已验证换域、主线转向生物；内核=两对象+事件日志+信任路由（域中立硬门）"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "cocaineeeeee" }]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "pydantic>=2",
+    "PyYAML",
+    "matplotlib",
+    "pandas",
+    "pillow",
+]
+
+[project.scripts]
+expos = "expos.cli:main"
+
+[project.optional-dependencies]
+ui = ["streamlit"]
+llm = ["anthropic"]
+docs = ["mkdocs", "mkdocs-material"]
+dev = ["pytest", "hypothesis"]
+
+[tool.setuptools.packages.find]
+include = ["expos*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

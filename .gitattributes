@@ -1,0 +1,12 @@
+# Normalize line endings to LF on checkin; auto-detect text vs binary.
+* text=auto eol=lf
+
+# Explicit binary types (no line-ending munging / diff).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.ico binary
+*.zip binary
+*.gz binary

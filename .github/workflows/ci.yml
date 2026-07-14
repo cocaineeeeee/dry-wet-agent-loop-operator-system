@@ -1,0 +1,87 @@
+name: CI
+
+# 两层 CI（详见 docs/ENGINEERING.md）：
+#   fast — lint + 快测试子集（<1min），每次 push/PR 都跑，给出秒级反馈。
+#   full — 全量测试含 e2e 闭环，Python 3.11/3.13 矩阵，带超时；e2e 慢故单列。
+# references/（第三方 clone）与 runs/（运行产物）改动不触发 CI。
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'references/**'
+      - 'runs/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - 'references/**'
+      - 'runs/**'
+
+# 同一分支的旧运行自动取消，省算力
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- 第一层：lint + 快测试（秒级反馈）----
+  fast:
+    name: fast (lint + quick tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install lint + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -e .
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Quick test suite (<1min)
+        run: |
+          pytest -q \
+            tests/test_kernel.py \
+            tests/test_design.py \
+            tests/test_adapters.py \
+            tests/test_planner_stages.py
+
+  # ---- 第二层：全量测试含 e2e（矩阵 + 超时）----
+  full:
+    name: full (all tests incl. e2e)
+    needs: fast
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-timeout
+          pip install -e .
+
+      - name: Full test suite (incl. e2e loop)
+        # e2e（test_loop_e2e）跑真实闭环，较慢；单条用例超时保护，避免挂死占用 runner。
+        run: pytest -q --durations=10 --timeout=300

@@ -1,0 +1,56 @@
+# deviations.yaml —— CHECKPOINTS 压测更正记录的机器可读镜像（Claim Ledger 输入）
+#
+# 把散落在 CHECKPOINTS / README / PAPER / mailbox 里的「预注册偏差 / 数据带病」
+# 更正，登记为机器可读条目，供 claim_compiler 决定 stale / 附偏差指针。
+#
+# 字段：
+#   deviation_id           稳定 id（被 claims.yaml 的 claim.deviations 引用）。
+#   class                  prereg_rejected（预注册被证否）/ data_diseased（数据带病）。
+#   status                 open（未闭合）/ closed（已裁定）。
+#   pending_reaggregation  true ⇒ 引用它的主张自动降 stale（待新代际重聚合）。
+#   pending_generation     预期由哪个代际重聚合修复。
+#   summary                人读摘要。
+#   recorded_in            该偏差已在哪些散文/产物点位记账（一致性核查用）。
+#   checkpoints_ref        CHECKPOINTS 台账指针。
+
+version: 1
+
+deviations:
+  # H1 预注册被证否：数据成立、方向与预注册相反 → 已裁定闭合（不带病，故不 stale）。
+  - deviation_id: H1_REJECTED_os_worse
+    class: prereg_rejected
+    status: closed
+    pending_reaggregation: false
+    summary: >-
+      H1 预注册 os 的 regret 在结构档显著优于 robust-blind；Gen-2（r1_resweep）S2r3
+      中高档池化实测 mean_diff(os−robust)=+0.01606、p=1e-4（正=os 更差），方向与预注册
+      相反 → 拒绝主假设，落 literal_verdict=H1_REJECTED_os_worse。剔 batch 后拒绝更强
+      （edge_only +0.023, p=1e-4），故拒绝不依赖 P0 batch 病。
+    recorded_in:
+      - README.md
+      - PAPER_OUTLINE.md
+      - runs/r1_resweep/report/aggregate_summary.json
+      - mailbox/red_to_blue/003_agg3-h1-sensitivity.md
+    checkpoints_ref: "CHECKPOINTS R1 复盘 · H1 判定（os vs robust 结构档）"
+
+  # batch 方向判反：Gen-1/2 batch 检出/归因带病 → P0 修复 + Gen-3 重聚合后闭合（inverted=0）。
+  - deviation_id: batch_direction_diseased
+    class: data_diseased
+    status: closed
+    pending_reaggregation: false
+    pending_generation: gen-3
+    summary: >-
+      Gen-1/2 batch_effect 方向正确率全档 0.000（判反，归因 100% 误标干净批）。P0 修复
+      （checks.py 修法② 双锚选批 + attribution.py sign(t_batch)==sign(shift_hat) 交叉守卫）
+      落地后重跑 600 批次格；Gen-3 重聚合（runs/r1_resweep/report/m12_batch_direction_summary.json）
+      实测**全 Gen-3 批次格 inverted=0、correct=1069、方向正确率=1.000**，红队 probe_direction.py
+      在重跑后数据上独立复核 inverted=0（direction_results 旧档 17:49 早于 20:10 重跑，已作废）。
+      full_sweep 旧档未重跑仍带病（inverted=117），作诚实对照保留。偏差就此闭合、不再 stale。
+    data_source_glob: "runs/*/report/*"
+    recorded_in:
+      - mailbox/red_to_blue/003_agg3-h1-sensitivity.md
+      - mailbox/red_to_blue/004_att3-attribution-findings.md
+      - mailbox/blue_to_red/016_sweeps-complete-b3-ready.md
+      - runs/r1_resweep/report/m12_batch_direction_summary.json
+      - runs/r1_resweep/report/gen3_manifest.json
+    checkpoints_ref: "CHECKPOINTS P0 · batch 方向修复批（checks.py 修法② + 归因镜像守卫）；Gen-3 冻结记录"

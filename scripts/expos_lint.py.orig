@@ -1,0 +1,675 @@
+#!/usr/bin/env python3
+"""expos-lint —— 平台级红线机器化闸门（族5 报告 §6 规则清单落地）。
+
+设计（借 ruff 规则分级 + pandera lazy 聚合 + pre-commit health_check）：
+
+- 规则 ID 化：每条规则一个稳定码 `EXPNNN` + 声明式元数据（tier / scope / reason）。
+- 三档 tier（借 ruff RuleGroup 分级）：
+    * error   —— 不变量破坏。命中即 **exit 1**（红线，基线恒 0）。
+    * warn    —— hygiene / 词表漂移。**打印不挡**（exit 不受影响，提醒修）。
+    * preview —— 灰度语义启发式。**默认不跑**，`--preview` 才启用；永不影响 exit。
+- lazy 聚合（借 pandera）：跑全部启用规则、聚合成 (code, file, line, message) 四元组
+  报告，**绝不首错中断**。
+- 自检（借 pre-commit health_check）：规则码唯一、tier 合法、scope 目录存在——
+  任一不满足 **响亮失败**（exit 2），而非静默跳过。
+
+零第三方依赖：仅用 stdlib（ast + re + pathlib）。yaml 用正则轻解析（不 import PyYAML）。
+
+用法：
+    python3 scripts/expos_lint.py                # 跑 error+warn（全仓），有 error → exit 1
+    python3 scripts/expos_lint.py --preview      # 额外跑 preview 灰度规则（不影响 exit）
+    python3 scripts/expos_lint.py --select EXP003 EXP010   # 只跑指定规则
+    python3 scripts/expos_lint.py --root /path/to/repo     # 指定仓库根（测试用）
+    python3 scripts/expos_lint.py --list         # 打印规则表后退出
+
+规则表（族5 §6 → 本项目真实红线，①..⑩）：
+    EXP001  error    XT  四包(qc/models/planner/agent)源码含 `truth` 标识符（排除注释/docstring）
+    EXP002  error    XB  loop.py 的 mode 字符串判定出现在 _policies_for_mode 之外（零分支红线）
+    EXP003  error    XB  attribution 与 sim_base 的批次公式失联（(row+col)%n vs idx%n 不一致）
+    EXP004  error    XT  adapters 非 sim_*/base.py 文件出现 truth_records 生成/消费
+    EXP005  error    XS  裸 except / 静默 pass（无 log/raise 的吞异常）
+    EXP006  preview  XS  NotImplementedError 占位滞留（信息含 未接线/占位 但 mode 已在 _ARM_TO_MODE）
+    EXP007  error    XL  kernel 对上层包(qc/planner/agent/adapters/eval/loop)的 import（依赖倒挂）
+    EXP008  error    XL  域/插件 yaml 声明 shadow 内置 adapter 名（register_adapter/adapters 块）
+    EXP009  warn     XH  测试文件里 pytest.mark.skip/skipif 无 reason
+    EXP010  warn     XH  源码 append_event 事件名不在 docs/EVENT_SCHEMA.md 已登记词表（词表漂移）
+
+码前缀表领域不表严重度（借 ruff not-copy）：XT=truth 隔离 / XA=agent 权限 /
+XS=静默降级 / XB=预算·批次·布局 / XL=分层与依赖 / XH=hygiene。
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import re
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable
+
+# ============================================================
+# tier 常量与数据结构
+# ============================================================
+ERROR = "error"
+WARN = "warn"
+PREVIEW = "preview"
+VALID_TIERS = (ERROR, WARN, PREVIEW)
+
+# 旧棘轮键 → 新码 redirect（借 ruff rule_redirects；旧键报"已更名"而非 KeyError）
+REDIRECTS = {
+    "bare_except": "EXP005",
+    "broad_except": "EXP005",
+    "silent_pass": "EXP005",
+}
+
+
+@dataclass(frozen=True)
+class Finding:
+    code: str
+    tier: str
+    path: str        # 相对仓库根
+    line: int
+    message: str
+
+
+@dataclass
+class Rule:
+    code: str
+    tier: str
+    domain: str      # 前缀领域 XT/XA/XS/XB/XL/XH
+    scope: str       # 人读的作用域描述（自检时不解析，仅文档）
+    reason: str
+    check: Callable[["Context"], list[Finding]]
+
+
+@dataclass
+class Context:
+    root: Path
+    _cache: dict = field(default_factory=dict)
+
+    def rel(self, p: Path) -> str:
+        try:
+            return str(p.relative_to(self.root))
+        except ValueError:
+            return str(p)
+
+    def read(self, p: Path) -> str | None:
+        try:
+            return p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    def parse(self, p: Path) -> ast.AST | None:
+        src = self.read(p)
+        if src is None:
+            return None
+        try:
+            return ast.parse(src, filename=str(p))
+        except SyntaxError:
+            return None
+
+    def py_files(self, subdir: str) -> list[Path]:
+        base = self.root / subdir
+        if not base.is_dir():
+            return []
+        return sorted(base.rglob("*.py"))
+
+
+# ============================================================
+# 工具函数
+# ============================================================
+def _iter_names(tree: ast.AST):
+    """所有标识符 token（Name.id / Attribute.attr / arg 名 / 关键字名）——
+    ast 天然不含注释/docstring 里的裸文本，故用它做"标识符出现"检查。"""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            yield node.id, node.lineno
+        elif isinstance(node, ast.Attribute):
+            yield node.attr, node.lineno
+        elif isinstance(node, ast.arg):
+            yield node.arg, node.lineno
+        elif isinstance(node, ast.keyword) and node.arg is not None:
+            yield node.arg, node.lineno
+
+
+def _func_range(tree: ast.AST, name: str) -> tuple[int, int] | None:
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            end = getattr(node, "end_lineno", node.lineno)
+            return node.lineno, end
+    return None
+
+
+def _is_logging_call(node: ast.AST) -> bool:
+    """判断一个 Call 是否像"响亮告警"（print / logging.* / *.stderr.write / warnings.warn）。"""
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    names = []
+    cur = func
+    while isinstance(cur, ast.Attribute):
+        names.append(cur.attr.lower())
+        cur = cur.value
+    if isinstance(cur, ast.Name):
+        names.append(cur.id.lower())
+    joined = " ".join(names)
+    markers = ("print", "log", "warn", "warning", "error", "exception",
+               "critical", "info", "debug", "stderr", "write")
+    return any(m in joined for m in markers)
+
+
+def _handler_is_silent(handler: ast.ExceptHandler) -> bool:
+    """裸 except（type None）→ 静默；否则 body 仅由 `pass` 构成（去掉领头 docstring）
+    且无 raise、无告警调用 → 静默 pass。窄 except 做真实兜底（赋值/返回值/continue）不算。"""
+    if handler.type is None:
+        return True
+    body = [
+        s for s in handler.body
+        if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant)
+                and isinstance(s.value.value, str))
+    ]
+    if not body:
+        return False
+    if not all(isinstance(s, ast.Pass) for s in body):
+        return False
+    # body 全是 pass —— 再确认没有 raise / 告警（pass-only 必然没有，稳妥起见仍查）
+    for sub in ast.walk(handler):
+        if isinstance(sub, ast.Raise):
+            return False
+        if _is_logging_call(sub):
+            return False
+    return True
+
+
+def _read_builtin_adapters(root: Path) -> set[str]:
+    """从 expos/domain.py 的 ADAPTER_REGISTRY 字面量抽内置 adapter 名。"""
+    dp = root / "expos" / "domain.py"
+    try:
+        text = dp.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    m = re.search(r"ADAPTER_REGISTRY\s*[:=].*?\{(.*?)\}", text, re.DOTALL)
+    if not m:
+        return set()
+    return set(re.findall(r'["\']([\w.-]+)["\']\s*:', m.group(1)))
+
+
+def _read_armed_modes(root: Path) -> set[str]:
+    """从 expos/eval/run_cell.py 抽 _ARM_TO_MODE / _ROBUST_ARMS 中已接线的 mode 名。"""
+    rp = root / "expos" / "eval" / "run_cell.py"
+    try:
+        text = rp.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    modes: set[str] = set()
+    m = re.search(r"_ARM_TO_MODE\s*=\s*\{(.*?)\}", text, re.DOTALL)
+    if m:
+        # 取 value（mode 名），value 是真正被 loop._policies_for_mode 接线的字符串
+        modes |= set(re.findall(r':\s*["\']([\w-]+)["\']', m.group(1)))
+        modes |= set(re.findall(r'["\']([\w-]+)["\']\s*:', m.group(1)))
+    m2 = re.search(r"_ROBUST_ARMS\s*=\s*\{(.*?)\}", text, re.DOTALL)
+    if m2:
+        modes |= set(re.findall(r'["\']([\w-]+)["\']', m2.group(1)))
+    # robust 臂在 run_cell 内直接映射到 "robust"，也算已接线
+    modes.add("robust")
+    return {m for m in modes if m}
+
+
+def _read_registered_kinds(root: Path) -> set[str]:
+    """从 docs/EVENT_SCHEMA.md 抽已登记事件 kind（§1 的 `### <kind> — …` 表头）。"""
+    dp = root / "docs" / "EVENT_SCHEMA.md"
+    try:
+        text = dp.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    kinds = set(re.findall(r"^###\s+([A-Za-z_]\w*)\s*[—-]", text, re.MULTILINE))
+    # 兼容 §4 里显式 REGISTERED = {...} 字面量（若存在则并入）
+    m = re.search(r"REGISTERED\s*=\s*\{(.*?)\}", text, re.DOTALL)
+    if m:
+        kinds |= set(re.findall(r'["\']([A-Za-z_]\w*)["\']', m.group(1)))
+    return kinds
+
+
+def _batch_formulas(text: str) -> set[str]:
+    """抽 f-string 批次标签 `...-B{<expr>}` 中的 <expr>，归一化后返回集合。
+    归一化：去空格、去属性属主前缀（`w.` / `obs.` 等），小写——使
+    `(w.row + w.col) % n_batches` 与文档里的 `(row+col)%n_batches` 判为同一公式。"""
+    out: set[str] = set()
+    for expr in re.findall(r"-B\{([^{}]+)\}", text):
+        norm = re.sub(r"\s+", "", expr)
+        norm = re.sub(r"\b\w+\.", "", norm)   # 去掉 owner. 前缀（w.row -> row）
+        out.add(norm.lower())
+    return out
+
+
+# ============================================================
+# 规则实现（①..⑩）
+# ============================================================
+def rule_exp001(ctx: Context) -> list[Finding]:
+    """① 四包源码含 `truth` 标识符（排除注释/docstring —— 这些目录合法引用红线条文）。"""
+    findings: list[Finding] = []
+    for sub in ("expos/qc", "expos/models", "expos/planner", "expos/agent"):
+        for p in ctx.py_files(sub):
+            tree = ctx.parse(p)
+            if tree is None:
+                continue
+            for name, lineno in _iter_names(tree):
+                if "truth" in name.lower():
+                    findings.append(Finding(
+                        "EXP001", ERROR, ctx.rel(p), lineno,
+                        f"标识符 `{name}` 含 truth——四包(qc/models/planner/agent)禁触真值（红线 XT 隔离）",
+                    ))
+    return findings
+
+
+def rule_exp002(ctx: Context) -> list[Finding]:
+    """② loop.py 的 mode 字符串判定出现在 _policies_for_mode 之外（零分支红线）。"""
+    findings: list[Finding] = []
+    p = ctx.root / "expos" / "loop.py"
+    tree = ctx.parse(p)
+    if tree is None:
+        return findings
+    rng = _func_range(tree, "_policies_for_mode")
+    lo, hi = rng if rng else (0, 0)
+
+    def _is_mode_name(n: ast.AST) -> bool:
+        return isinstance(n, ast.Name) and n.id == "mode"
+
+    def _is_str_const_or_seq(n: ast.AST) -> bool:
+        if isinstance(n, ast.Constant) and isinstance(n.value, str):
+            return True
+        if isinstance(n, (ast.Tuple, ast.List, ast.Set)):
+            return any(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in n.elts)
+        return False
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Compare):
+            continue
+        operands = [node.left, *node.comparators]
+        # 只在 `mode` 与字符串常量/字符串序列直接比较时算"mode 判定"
+        has_mode = any(_is_mode_name(o) for o in operands)
+        has_str = any(_is_str_const_or_seq(o) for o in operands if not _is_mode_name(o))
+        if has_mode and has_str:
+            if not (lo <= node.lineno <= hi):
+                findings.append(Finding(
+                    "EXP002", ERROR, ctx.rel(p), node.lineno,
+                    "mode 字符串判定出现在 _policies_for_mode 之外——违反 loop 主体零 mode 分支红线（DEEP_REVIEW §3.2）",
+                ))
+    return findings
+
+
+def rule_exp003(ctx: Context) -> list[Finding]:
+    """③ attribution 与 sim_base 的批次公式失联（(row+col)%n vs idx%n 不一致）。"""
+    findings: list[Finding] = []
+    sim = ctx.root / "expos" / "adapters" / "sim_base.py"
+    attr = ctx.root / "expos" / "qc" / "attribution.py"
+    sim_text = ctx.read(sim)
+    attr_text = ctx.read(attr)
+    if sim_text is None or attr_text is None:
+        return findings
+    sim_f = _batch_formulas(sim_text)
+    attr_f = _batch_formulas(attr_text)
+    if not sim_f or not attr_f:
+        return findings  # 缺一侧公式无从对账，不误报
+    drift = attr_f - sim_f
+    if drift:
+        # 定位 attribution 里失联公式的行号
+        for i, line in enumerate(attr_text.splitlines(), start=1):
+            fs = _batch_formulas(line)
+            if fs & drift:
+                findings.append(Finding(
+                    "EXP003", ERROR, ctx.rel(attr), i,
+                    f"批次分组公式 {sorted(fs & drift)} 与 sim_base 的 {sorted(sim_f)} 不一致——"
+                    "批次公式失联会使观测被排除出自身批组、真批次效应被稀释（M3 缝隙审查实锤 bug）",
+                ))
+    return findings
+
+
+def rule_exp004(ctx: Context) -> list[Finding]:
+    """④ adapters 非 sim_*/base.py 文件出现 truth_records 生成/消费（AST，忽略注释/docstring）。"""
+    findings: list[Finding] = []
+    for p in ctx.py_files("expos/adapters"):
+        name = p.name
+        if name.startswith("sim_") or name == "base.py":
+            continue  # legitimate producers: simulators + base
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            hit = False
+            if isinstance(node, ast.keyword) and node.arg == "truth_records":
+                # Explicit truth_records=None is red-line COMPLIANCE (the caller
+                # is declaring "this path carries no truth"), not a touch --
+                # flagging it punished exactly the code doing the right thing
+                # (adapters/wet/bridge.py, M16 W4).
+                is_none = isinstance(node.value, ast.Constant) and node.value.value is None
+                hit = not is_none  # 生成：RawResult(..., truth_records=...)
+            elif isinstance(node, ast.Attribute) and node.attr == "truth_records":
+                hit = True  # 消费：result.truth_records
+            elif isinstance(node, ast.Name) and node.id == "truth_records":
+                hit = True
+            if hit:
+                findings.append(Finding(
+                    "EXP004", ERROR, ctx.rel(p), node.lineno,
+                    "truth_records 只允许 adapters/sim_*/base.py 生成——本文件触碰真值 sidecar（红线 XT）",
+                ))
+    return findings
+
+
+def rule_exp005(ctx: Context) -> list[Finding]:
+    """⑤ 裸 except / 静默 pass（无 log/raise 的吞异常）。scope: expos/（测试可宽异常，排除）。"""
+    findings: list[Finding] = []
+    for p in ctx.py_files("expos"):
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ExceptHandler) and _handler_is_silent(node):
+                kind = "裸 except" if node.type is None else "静默 pass"
+                findings.append(Finding(
+                    "EXP005", ERROR, ctx.rel(p), node.lineno,
+                    f"{kind}——吞异常且无 raise/告警，违反无静默降级红线（CONTRIBUTING §3）",
+                ))
+    return findings
+
+
+def rule_exp006(ctx: Context) -> list[Finding]:
+    """⑥ NotImplementedError 占位滞留：信息含 未接线/占位 但对应 mode 已在 _ARM_TO_MODE。"""
+    findings: list[Finding] = []
+    modes = _read_armed_modes(ctx.root)
+    if not modes:
+        return findings
+    # 按长度降序拼 word-boundary 正则（os-soft 先于 os；避免 cost/most 误匹配 os）
+    alt = "|".join(re.escape(m) for m in sorted(modes, key=len, reverse=True))
+    mode_re = re.compile(rf"(?<![\w-])(?:{alt})(?![\w-])")
+    markers = ("未接线", "占位")
+    for p in ctx.py_files("expos"):
+        text = ctx.read(p)
+        if text is None:
+            continue
+        for i, line in enumerate(text.splitlines(), start=1):
+            if any(mk in line for mk in markers) and mode_re.search(line):
+                hit = mode_re.search(line).group(0)
+                findings.append(Finding(
+                    "EXP006", PREVIEW, ctx.rel(p), i,
+                    f"占位/未接线信息引用了已接线 mode `{hit}`（已在 _ARM_TO_MODE）——疑似占位滞留未清",
+                ))
+    return findings
+
+
+def rule_exp007(ctx: Context) -> list[Finding]:
+    """⑦ kernel 对上层包(qc/planner/agent/adapters/eval/loop)的 import（依赖方向倒挂）。"""
+    findings: list[Finding] = []
+    upper = ("qc", "planner", "agent", "adapters", "eval", "loop")
+    upper_mods = {f"expos.{u}" for u in upper}
+    for p in ctx.py_files("expos/kernel"):
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            mod = None
+            if isinstance(node, ast.ImportFrom) and node.module:
+                mod = node.module
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    _check_upper(a.name, upper_mods, ctx, p, node.lineno, findings)
+                continue
+            if mod and (mod in upper_mods or any(mod.startswith(u + ".") for u in upper_mods)):
+                findings.append(Finding(
+                    "EXP007", ERROR, ctx.rel(p), node.lineno,
+                    f"kernel import 上层包 `{mod}`——依赖方向倒挂（内核不得依赖 qc/planner/agent/adapters/eval/loop）",
+                ))
+    return findings
+
+
+def _check_upper(mod, upper_mods, ctx, p, lineno, findings):
+    if mod in upper_mods or any(mod.startswith(u + ".") for u in upper_mods):
+        findings.append(Finding(
+            "EXP007", ERROR, ctx.rel(p), lineno,
+            f"kernel import 上层包 `{mod}`——依赖方向倒挂",
+        ))
+
+
+def rule_exp008(ctx: Context) -> list[Finding]:
+    """⑧ 域/插件 yaml 声明 shadow 内置 adapter 名（register_adapter 标量 / adapters 块）。
+    纯标量 `adapter: <name>`（引用既有）不算 shadow；`register_adapter:` / `adapters:` 块才是定义。"""
+    findings: list[Finding] = []
+    dom = ctx.root / "domains"
+    if not dom.is_dir():
+        return findings
+    builtins = _read_builtin_adapters(ctx.root)
+    for p in sorted(dom.glob("*.yaml")) + sorted(dom.glob("*.yml")):
+        text = ctx.read(p)
+        if text is None:
+            continue
+        lines = text.splitlines()
+        in_adapters_block = False
+        block_indent = 0
+        for i, line in enumerate(lines, start=1):
+            # Form A: register_adapter: <name>
+            m = re.match(r"\s*register_adapter\s*:\s*[\"']?([\w.-]+)", line)
+            if m and m.group(1) in builtins:
+                findings.append(Finding(
+                    "EXP008", ERROR, ctx.rel(p), i,
+                    f"register_adapter `{m.group(1)}` shadow 内置 adapter 名——插件不得覆盖内置注册（XL 分层红线）",
+                ))
+            # Form B: adapters: 映射块，子键为被定义的名字
+            if re.match(r"\s*adapters\s*:\s*$", line):
+                in_adapters_block = True
+                block_indent = len(line) - len(line.lstrip())
+                continue
+            if in_adapters_block:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                indent = len(line) - len(line.lstrip())
+                if indent <= block_indent:
+                    in_adapters_block = False
+                else:
+                    cm = re.match(r"\s*([\w.-]+)\s*:", line)
+                    if cm and cm.group(1) in builtins:
+                        findings.append(Finding(
+                            "EXP008", ERROR, ctx.rel(p), i,
+                            f"adapters 块定义 `{cm.group(1)}` shadow 内置 adapter 名——插件不得覆盖内置注册（XL）",
+                        ))
+    return findings
+
+
+def rule_exp009(ctx: Context) -> list[Finding]:
+    """⑨ 测试文件里 pytest.mark.skip / skipif 无 reason。"""
+    findings: list[Finding] = []
+
+    def _is_skip_attr(n: ast.AST) -> str | None:
+        # 识别 ....mark.skip / ....mark.skipif（属性链尾）
+        if isinstance(n, ast.Attribute) and n.attr in ("skip", "skipif"):
+            owner = n.value
+            if isinstance(owner, ast.Attribute) and owner.attr == "mark":
+                return n.attr
+        return None
+
+    for p in ctx.py_files("tests"):
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            for deco in node.decorator_list:
+                if isinstance(deco, ast.Call):
+                    which = _is_skip_attr(deco.func)
+                    if which and not any(k.arg == "reason" for k in deco.keywords):
+                        findings.append(Finding(
+                            "EXP009", WARN, ctx.rel(p), deco.lineno,
+                            f"pytest.mark.{which}(...) 缺 reason=——skip 须说明缘由（覆盖静默缩水的味道）",
+                        ))
+                else:
+                    which = _is_skip_attr(deco)
+                    if which:  # 裸 @pytest.mark.skip 无参 → 无 reason
+                        findings.append(Finding(
+                            "EXP009", WARN, ctx.rel(p), deco.lineno,
+                            f"裸 @pytest.mark.{which} 无 reason=——skip 须说明缘由",
+                        ))
+    return findings
+
+
+def rule_exp010(ctx: Context) -> list[Finding]:
+    """⑩ 源码 append_event 事件名不在 docs/EVENT_SCHEMA.md 已登记词表（词表漂移→warn）。"""
+    findings: list[Finding] = []
+    registered = _read_registered_kinds(ctx.root)
+    if not registered:
+        return findings
+    for p in ctx.py_files("expos"):
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "append_event"):
+                continue
+            if not node.args:
+                continue
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                kind = first.value
+                if kind not in registered:
+                    findings.append(Finding(
+                        "EXP010", WARN, ctx.rel(p), node.lineno,
+                        f"事件 kind `{kind}` 未登记于 docs/EVENT_SCHEMA.md——词表漂移，请补文档或改名",
+                    ))
+    return findings
+
+
+# ============================================================
+# 规则注册表
+# ============================================================
+RULES: list[Rule] = [
+    Rule("EXP001", ERROR, "XT", "expos/{qc,models,planner,agent}",
+         "四包禁触 truth 标识符", rule_exp001),
+    Rule("EXP002", ERROR, "XB", "expos/loop.py",
+         "mode 判定唯一（零分支红线）", rule_exp002),
+    Rule("EXP003", ERROR, "XB", "expos/adapters/sim_base.py + expos/qc/attribution.py",
+         "批次公式两处必一致", rule_exp003),
+    Rule("EXP004", ERROR, "XT", "expos/adapters/ 非 sim_*/base.py",
+         "truth_records 唯一合法产地", rule_exp004),
+    Rule("EXP005", ERROR, "XS", "expos/",
+         "无静默降级（裸 except / pass 吞异常）", rule_exp005),
+    Rule("EXP006", PREVIEW, "XS", "expos/",
+         "占位滞留（已接线 mode 仍标未接线/占位）", rule_exp006),
+    Rule("EXP007", ERROR, "XL", "expos/kernel/",
+         "依赖方向不倒挂", rule_exp007),
+    Rule("EXP008", ERROR, "XL", "domains/*.yaml",
+         "插件不得 shadow 内置 adapter 名", rule_exp008),
+    Rule("EXP009", WARN, "XH", "tests/",
+         "skip 须带 reason", rule_exp009),
+    Rule("EXP010", WARN, "XH", "expos/ + docs/EVENT_SCHEMA.md",
+         "事件词表不漂移", rule_exp010),
+]
+
+
+# ============================================================
+# 自检（health_check 思想）
+# ============================================================
+def self_check(root: Path) -> list[str]:
+    problems: list[str] = []
+    codes = [r.code for r in RULES]
+    dup = {c for c in codes if codes.count(c) > 1}
+    if dup:
+        problems.append(f"规则码重复: {sorted(dup)}")
+    for r in RULES:
+        if r.tier not in VALID_TIERS:
+            problems.append(f"{r.code} tier 非法: {r.tier!r}")
+        if not re.fullmatch(r"EXP\d{3}", r.code):
+            problems.append(f"{r.code} 码格式非法（应为 EXPNNN）")
+    for tgt in REDIRECTS.values():
+        if tgt not in codes:
+            problems.append(f"redirect 目标 {tgt} 不在规则表")
+    # scope 目录存在性（软校验：仓库根下应有 expos/）
+    if not (root / "expos").is_dir():
+        problems.append(f"scope 根 {root}/expos 不存在——root 指错？")
+    return problems
+
+
+# ============================================================
+# 执行 + 报告
+# ============================================================
+def run_lint(root: Path, preview: bool = False,
+             select: list[str] | None = None) -> list[Finding]:
+    ctx = Context(root=root)
+    findings: list[Finding] = []
+    sel = set(select) if select else None
+    for rule in RULES:
+        if sel is not None and rule.code not in sel:
+            continue
+        if rule.tier == PREVIEW and not preview and (sel is None):
+            continue  # preview 默认不跑，除非 --preview 或精确点名
+        findings.extend(rule.check(ctx))
+    return findings
+
+
+def _report(findings: list[Finding], preview: bool) -> None:
+    by_tier = {ERROR: [], WARN: [], PREVIEW: []}
+    for f in findings:
+        by_tier[f.tier].append(f)
+    icon = {ERROR: "❌", WARN: "⚠️ ", PREVIEW: "🔬"}
+    label = {ERROR: "error", WARN: "warn", PREVIEW: "preview"}
+    for tier in (ERROR, WARN, PREVIEW):
+        items = by_tier[tier]
+        if not items:
+            continue
+        print(f"\n== {label[tier]} ({len(items)}) ==")
+        for f in sorted(items, key=lambda x: (x.code, x.path, x.line)):
+            print(f"{icon[tier]} {f.code} {f.path}:{f.line}: {f.message}")
+    n_err = len(by_tier[ERROR])
+    n_warn = len(by_tier[WARN])
+    n_prev = len(by_tier[PREVIEW])
+    print("\n" + "-" * 60)
+    if not findings:
+        scope = "error+warn+preview" if preview else "error+warn"
+        print(f"✓ expos-lint 全绿（{scope} 规则零命中）")
+    else:
+        parts = [f"error={n_err}", f"warn={n_warn}"]
+        if preview:
+            parts.append(f"preview={n_prev}")
+        print("expos-lint 命中: " + " ".join(parts)
+              + ("  → exit 1（有 error 破坏不变量）" if n_err else "  → exit 0（无 error，warn/preview 不挡）"))
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description="expos-lint —— 平台红线机器化闸门")
+    ap.add_argument("--root", default=None, help="仓库根（默认脚本上级目录）")
+    ap.add_argument("--preview", action="store_true", help="启用 preview 灰度规则（不影响 exit）")
+    ap.add_argument("--select", nargs="+", default=None, help="只跑指定规则码（含 preview）")
+    ap.add_argument("--list", action="store_true", help="打印规则表后退出")
+    args = ap.parse_args(argv)
+
+    root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent
+
+    if args.list:
+        print("code    tier     domain  scope")
+        for r in RULES:
+            print(f"{r.code}  {r.tier:<7}  {r.domain:<5}  {r.scope}  — {r.reason}")
+        return 0
+
+    # 自检（health_check）：坏就响亮失败
+    problems = self_check(root)
+    if problems:
+        print("expos-lint SELF-CHECK FAILED（规则表/配置不一致）：", file=sys.stderr)
+        for p in problems:
+            print(f"  - {p}", file=sys.stderr)
+        return 2
+
+    # 归一 redirect（若 --select 传了旧棘轮键）
+    select = args.select
+    if select:
+        select = [REDIRECTS.get(s, s) for s in select]
+
+    findings = run_lint(root, preview=args.preview, select=select)
+    _report(findings, preview=args.preview or bool(select))
+
+    n_err = sum(1 for f in findings if f.tier == ERROR)
+    return 1 if n_err else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

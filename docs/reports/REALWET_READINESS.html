@@ -1,0 +1,1421 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>expos Real-Wet Readiness Report</title><style>
+:root{--bg:#ffffff;--fg:#1b1f24;--muted:#5b6570;--line:#d8dee4;--head:#0f172a;
+--ok:#0f7b3f;--okbg:#e7f6ec;--bad:#b4232a;--badbg:#fbe9ea;--warn:#8a5a00;--warnbg:#fdf3e0;
+--strong:#0f7b3f;--reject:#b4232a;--undec:#5b6570;--accent:#1f4f82;--card:#f6f8fa;}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ec;--muted:#9aa4ae;
+--line:#2a323b;--head:#e6e9ec;--ok:#4ecb7b;--okbg:#122a1c;--bad:#f0868b;--badbg:#2c1416;
+--warn:#e0b24a;--warnbg:#2a2110;--strong:#4ecb7b;--reject:#f0868b;--undec:#9aa4ae;
+--accent:#7fb0e8;--card:#161b22;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+main{max-width:960px;margin:0 auto;padding:32px 20px 80px;}
+.masthead{border-bottom:2px solid var(--head);padding-bottom:18px;margin-bottom:28px;}
+h1{font-size:26px;margin:0 0 6px;color:var(--head);letter-spacing:-.01em;}
+.subtitle{font-size:15px;color:var(--muted);margin:0 0 4px;}
+.asof{font-size:12px;color:var(--muted);margin:0 0 14px;}
+h2{font-size:19px;margin:38px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line);color:var(--head);}
+h3{font-size:15px;margin:22px 0 8px;color:var(--head);}
+p{margin:8px 0;}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;}
+ul{margin:8px 0;padding-left:22px;}
+li{margin:4px 0;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+background:var(--card);padding:1px 5px;border-radius:4px;word-break:break-all;}
+.kv{display:flex;gap:10px;padding:3px 0;font-size:13.5px;}
+.kv .k{color:var(--muted);min-width:150px;}
+.kv .v{font-weight:600;}
+.nameplate{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:2px 24px;margin:10px 0;padding:14px 16px;background:var(--card);border-radius:8px;}
+.tablewrap{overflow-x:auto;margin:14px 0;}
+table{border-collapse:collapse;width:100%;font-size:13px;}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;}
+th{background:var(--card);color:var(--head);font-weight:600;white-space:nowrap;}
+td.rowhead{font-weight:600;background:var(--card);white-space:nowrap;}
+tr.mismatch td{background:var(--badbg);}
+tr.diff td.diffcell{background:var(--warnbg);}
+td.ok,.pill.ok{color:var(--ok);}
+td.bad,.pill.bad{color:var(--bad);font-weight:600;}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;}
+.pill.ok{background:var(--okbg);color:var(--ok);}
+.pill.bad{background:var(--badbg);color:var(--bad);}
+.pill.undec{background:var(--card);color:var(--undec);}
+.status-supported{color:var(--strong);font-weight:600;}
+.status-rejected{color:var(--reject);font-weight:600;}
+.status-insufficient{color:var(--undec);}
+sup.anc{color:var(--accent);font-size:10px;font-weight:600;padding-left:1px;cursor:help;}
+.anchor-block{background:var(--card);border:1px dashed var(--line);border-radius:6px;
+padding:10px 12px;font-size:11px;line-height:1.4;color:var(--muted);overflow-x:auto;
+white-space:pre;margin:10px 0 4px;}
+.fp{font-family:ui-monospace,monospace;font-size:12px;}
+.fp.from{color:var(--muted);}
+.fp.to{color:var(--accent);font-weight:600;}
+.arrow{margin:0 8px;color:var(--muted);}
+.chart{margin:16px 0;}
+.evalue-chart{width:100%;height:auto;background:var(--card);border-radius:8px;}
+.evalue-chart .axis{stroke:var(--muted);stroke-width:1;}
+.evalue-chart .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3;}
+.evalue-chart .tick{fill:var(--muted);font-size:10px;}
+.evalue-chart .series{fill:none;stroke-width:2;}
+.evalue-chart .dot{stroke:var(--bg);stroke-width:1;}
+figcaption{font-size:12px;color:var(--muted);margin-top:6px;}
+.legend{margin:6px 0;font-size:12px;display:flex;flex-wrap:wrap;gap:14px;}
+.legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--muted);}
+.legend-item .swatch{width:11px;height:11px;border-radius:2px;display:inline-block;}
+.s-flat .swatch,.s-flat{--s:#8a8f96;} .evalue-chart .s-flat{stroke:#8a8f96;} .s-flat .swatch{background:#8a8f96;}
+.s-zero .swatch,.s-zero{--s:#c98a00;} .evalue-chart .s-zero{stroke:#c98a00;} .s-zero .swatch{background:#c98a00;}
+.s-strong .swatch{background:#0f7b3f;} .evalue-chart .s-strong{stroke:#0f7b3f;}
+.s-flipped .swatch{background:#b4232a;} .evalue-chart .s-flipped{stroke:#b4232a;}
+.s-stage3 .swatch{background:#1f4f82;} .evalue-chart .s-stage3{stroke:#1f4f82;}
+.dot.d-supported{fill:#0f7b3f;} .dot.d-rejected{fill:#b4232a;} .dot.d-insufficient{fill:#8a8f96;}
+.boundary{background:var(--warnbg);border:1px solid var(--warn);border-radius:8px;padding:14px 18px;}
+.boundary h3{margin-top:0;color:var(--warn);}
+.quote{font-style:italic;border-left:4px solid var(--accent);padding:8px 14px;margin:12px 0;
+background:var(--card);border-radius:0 6px 6px 0;}
+.footer-digest{background:var(--card);border-radius:8px;padding:14px 16px;margin-top:14px;}
+
+.missing{background:var(--warnbg);border:1px solid var(--warn);border-radius:8px;
+padding:10px 14px;margin:12px 0;color:var(--warn);font-size:13.5px;}
+.missing-tag{font-weight:700;letter-spacing:.02em;text-transform:uppercase;font-size:12px;
+margin-right:8px;}
+.arc-node{font-family:ui-monospace,monospace;font-size:12px;background:var(--card);
+padding:1px 6px;border-radius:4px;}
+.stderr-quote{background:var(--card);border-left:4px solid var(--bad);border-radius:0 6px 6px 0;
+padding:10px 12px;font-size:12px;line-height:1.45;overflow-x:auto;white-space:pre-wrap;
+word-break:break-word;margin:8px 0;}
+td.stepnum{text-align:center;font-weight:700;color:var(--accent);width:2.4em;}
+td.stepstatus{white-space:nowrap;}
+.pill.warn{background:var(--warnbg);color:var(--warn);}
+.pill.reserved{background:var(--card);color:var(--muted);}
+tr.tamper td{background:var(--badbg);}
+</style></head><body><main><header class="masthead"><h1>expos Real-Wet Readiness Report</h1><p class="subtitle">Real-Wet Readiness — transaction-state coverage, crash matrix, no-redispatch proof, mismatch-as-evidence, volume invariants, differential results, human intervention, machine-derived limits, and the minimal safe steps to the first real machine.</p><p class="asof">Evidence as of 1.78399e+09 (derived from the latest physical-ledger transition timestamp). Report is a pure function of the evidence directory.</p><p>This Real-Wet Readiness report is regenerated as a pure function of the physical evidence directory: every number is recomputed from a scenario manifest, a kernel <code>events.jsonl</code>, a physical <code>action_ledger.jsonl</code>, a differential <code>diff_report.json</code>, or a captured <code>stderr</code> — and pinned by a content hash in the integrity footer. Missing evidence is rendered as a loud EVIDENCE-MISSING block, never silently skipped, so the report is honest at every stage of evidence accumulation.</p><div class="nameplate"><div class="kv"><span class="k">Evidence directory</span><span class="v"><code>readiness_evidence</code></span></div><div class="kv"><span class="k">Scenarios expected</span><span class="v">18</span></div><div class="kv"><span class="k">Scenarios with evidence</span><span class="v">18</span></div><div class="kv"><span class="k">Evidence index</span><span class="v"><span class="pill ok">present</span></span></div></div></header><section id="coverage"><h2>1. Transaction-state coverage</h2><p><strong>6 / 8</strong> legal action-state transitions are exercised by at least one scenario ledger. The legal edge set is the imported <code>_LEGAL_TRANSITIONS</code> table (the ledger's own state machine); a cell is <em>covered</em> only when some scenario's append-only ledger actually records that edge.</p><div class="tablewrap"><table class="coverage"><thead><tr class=""><th>from \ to</th><th>PLANNED</th><th>PENDING</th><th>COMMITTED</th><th>ROLLED_BACK</th><th>AWAITING_RECOVERY</th><th>ABORTED</th></tr></thead><tbody><tr class=""><td class="rowhead">PLANNED</td><td class="">·</td><td class="ok"><span class="pill ok">covered</span></td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td></tr><tr class=""><td class="rowhead">PENDING</td><td class="">·</td><td class="">·</td><td class="ok"><span class="pill ok">covered</span></td><td class="ok"><span class="pill ok">covered</span></td><td class="ok"><span class="pill ok">covered</span></td><td class="">·</td></tr><tr class=""><td class="rowhead">COMMITTED</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td></tr><tr class=""><td class="rowhead">ROLLED_BACK</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td></tr><tr class=""><td class="rowhead">AWAITING_RECOVERY</td><td class="">·</td><td class="ok"><span class="pill ok">covered</span></td><td class=""><span class="pill warn">uncovered</span></td><td class=""><span class="pill warn">uncovered</span></td><td class="">·</td><td class="ok"><span class="pill ok">covered</span></td></tr><tr class=""><td class="rowhead">ABORTED</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td><td class="">·</td></tr></tbody></table></div><p>Uncovered legal transitions (listed honestly — a legal edge no provided scenario drives yet):</p><ul><li>AWAITING_RECOVERY → COMMITTED</li><li>AWAITING_RECOVERY → ROLLED_BACK</li></ul></section><section id="crash"><h2>2. Crash matrix (resume equivalence + no double-dispatch)</h2><p>Each crash-injection scenario is killed at a distinct point and resumed. The report recomputes, from the resumed physical ledger alone: the hash chain re-verifies (imported <code>ActionLedger</code> replay), and no action was dispatched twice (each <code>action_id</code> is registered once and issues hardware I/O at most once per attempt). Decision-face equality across the crash is a kernel-<code>events.jsonl</code> property, shown when that log is provided.</p><div class="tablewrap"><table class="crash"><thead><tr class=""><th>Scenario</th><th>Killpoint</th><th>Resume style</th><th>Ledger chain</th><th>No double-dispatch</th><th>Decision face</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>crash_I1</code></td><td class="">I1</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr><tr class=""><td class="rowhead"><code>crash_I2</code></td><td class="">I2</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr><tr class=""><td class="rowhead"><code>crash_I3</code></td><td class="">I3</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr><tr class=""><td class="rowhead"><code>crash_I4</code></td><td class="">I4</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr><tr class=""><td class="rowhead"><code>crash_I5</code></td><td class="">I5</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr><tr class=""><td class="rowhead"><code>crash_I6</code></td><td class="">I6</td><td class="">same_run</td><td class=""><span class="pill reserved">not involved</span></td><td class=""><span class="pill reserved">n/a (no physical ledger)</span></td><td class=""><span class="pill ok">chain complete</span></td></tr></tbody></table></div></section><section id="redispatch"><h2>3. No-redispatch proof (per-action PENDING assertions)</h2><p>The red line: a resumed wet leg re-senses a PENDING action, it never re-dispatches it. This is asserted per <code>action_id</code>: the count of transitions INTO PENDING must equal the action's attempt count (one PENDING per legitimate <code>recover()</code> attempt), and resume-time idempotent replays re-send nothing (recorded as <code>idempotent_replay_skipped</code> notes on the append-only log).</p><h3><code>exact_success</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w0</code></td><td class="">1<sup class="anc">[1]</sup></td><td class="">1<sup class="anc">[2]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w1</code></td><td class="">1<sup class="anc">[3]</sup></td><td class="">1<sup class="anc">[4]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w2</code></td><td class="">1<sup class="anc">[5]</sup></td><td class="">1<sup class="anc">[6]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w3</code></td><td class="">1<sup class="anc">[7]</sup></td><td class="">1<sup class="anc">[8]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w4</code></td><td class="">1<sup class="anc">[9]</sup></td><td class="">1<sup class="anc">[10]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w5</code></td><td class="">1<sup class="anc">[11]</sup></td><td class="">1<sup class="anc">[12]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w6</code></td><td class="">1<sup class="anc">[13]</sup></td><td class="">1<sup class="anc">[14]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w7</code></td><td class="">1<sup class="anc">[15]</sup></td><td class="">1<sup class="anc">[16]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w8</code></td><td class="">1<sup class="anc">[17]</sup></td><td class="">1<sup class="anc">[18]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w9</code></td><td class="">1<sup class="anc">[19]</sup></td><td class="">1<sup class="anc">[20]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w10</code></td><td class="">1<sup class="anc">[21]</sup></td><td class="">1<sup class="anc">[22]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w11</code></td><td class="">1<sup class="anc">[23]</sup></td><td class="">1<sup class="anc">[24]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w12</code></td><td class="">1<sup class="anc">[25]</sup></td><td class="">1<sup class="anc">[26]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w13</code></td><td class="">1<sup class="anc">[27]</sup></td><td class="">1<sup class="anc">[28]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w14</code></td><td class="">1<sup class="anc">[29]</sup></td><td class="">1<sup class="anc">[30]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w15</code></td><td class="">1<sup class="anc">[31]</sup></td><td class="">1<sup class="anc">[32]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>sensed_mismatch</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w0</code></td><td class="">1<sup class="anc">[33]</sup></td><td class="">1<sup class="anc">[34]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w1</code></td><td class="">1<sup class="anc">[35]</sup></td><td class="">1<sup class="anc">[36]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w2</code></td><td class="">1<sup class="anc">[37]</sup></td><td class="">1<sup class="anc">[38]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w3</code></td><td class="">1<sup class="anc">[39]</sup></td><td class="">1<sup class="anc">[40]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w4</code></td><td class="">1<sup class="anc">[41]</sup></td><td class="">1<sup class="anc">[42]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w5</code></td><td class="">1<sup class="anc">[43]</sup></td><td class="">1<sup class="anc">[44]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w6</code></td><td class="">1<sup class="anc">[45]</sup></td><td class="">1<sup class="anc">[46]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w7</code></td><td class="">1<sup class="anc">[47]</sup></td><td class="">1<sup class="anc">[48]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w8</code></td><td class="">1<sup class="anc">[49]</sup></td><td class="">1<sup class="anc">[50]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w9</code></td><td class="">1<sup class="anc">[51]</sup></td><td class="">1<sup class="anc">[52]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w10</code></td><td class="">1<sup class="anc">[53]</sup></td><td class="">1<sup class="anc">[54]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w11</code></td><td class="">1<sup class="anc">[55]</sup></td><td class="">1<sup class="anc">[56]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w12</code></td><td class="">1<sup class="anc">[57]</sup></td><td class="">1<sup class="anc">[58]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w13</code></td><td class="">1<sup class="anc">[59]</sup></td><td class="">1<sup class="anc">[60]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w14</code></td><td class="">1<sup class="anc">[61]</sup></td><td class="">1<sup class="anc">[62]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w15</code></td><td class="">1<sup class="anc">[63]</sup></td><td class="">1<sup class="anc">[64]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>partial_execution</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w0</code></td><td class="">1<sup class="anc">[65]</sup></td><td class="">1<sup class="anc">[66]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w1</code></td><td class="">1<sup class="anc">[67]</sup></td><td class="">1<sup class="anc">[68]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w2</code></td><td class="">1<sup class="anc">[69]</sup></td><td class="">1<sup class="anc">[70]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w3</code></td><td class="">1<sup class="anc">[71]</sup></td><td class="">1<sup class="anc">[72]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w4</code></td><td class="">1<sup class="anc">[73]</sup></td><td class="">1<sup class="anc">[74]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w5</code></td><td class="">1<sup class="anc">[75]</sup></td><td class="">1<sup class="anc">[76]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w6</code></td><td class="">1<sup class="anc">[77]</sup></td><td class="">1<sup class="anc">[78]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w7</code></td><td class="">1<sup class="anc">[79]</sup></td><td class="">1<sup class="anc">[80]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w8</code></td><td class="">1<sup class="anc">[81]</sup></td><td class="">1<sup class="anc">[82]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w9</code></td><td class="">1<sup class="anc">[83]</sup></td><td class="">1<sup class="anc">[84]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w10</code></td><td class="">1<sup class="anc">[85]</sup></td><td class="">1<sup class="anc">[86]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w11</code></td><td class="">1<sup class="anc">[87]</sup></td><td class="">1<sup class="anc">[88]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w12</code></td><td class="">1<sup class="anc">[89]</sup></td><td class="">1<sup class="anc">[90]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w13</code></td><td class="">1<sup class="anc">[91]</sup></td><td class="">1<sup class="anc">[92]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w14</code></td><td class="">1<sup class="anc">[93]</sup></td><td class="">1<sup class="anc">[94]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w15</code></td><td class="">1<sup class="anc">[95]</sup></td><td class="">1<sup class="anc">[96]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>timeout_before_confirm</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w0</code></td><td class="">1<sup class="anc">[97]</sup></td><td class="">1<sup class="anc">[98]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w1</code></td><td class="">1<sup class="anc">[99]</sup></td><td class="">1<sup class="anc">[100]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w2</code></td><td class="">1<sup class="anc">[101]</sup></td><td class="">1<sup class="anc">[102]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w3</code></td><td class="">1<sup class="anc">[103]</sup></td><td class="">1<sup class="anc">[104]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w4</code></td><td class="">1<sup class="anc">[105]</sup></td><td class="">1<sup class="anc">[106]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w5</code></td><td class="">1<sup class="anc">[107]</sup></td><td class="">1<sup class="anc">[108]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w6</code></td><td class="">1<sup class="anc">[109]</sup></td><td class="">1<sup class="anc">[110]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w7</code></td><td class="">1<sup class="anc">[111]</sup></td><td class="">1<sup class="anc">[112]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w8</code></td><td class="">1<sup class="anc">[113]</sup></td><td class="">1<sup class="anc">[114]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w9</code></td><td class="">1<sup class="anc">[115]</sup></td><td class="">1<sup class="anc">[116]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w10</code></td><td class="">1<sup class="anc">[117]</sup></td><td class="">1<sup class="anc">[118]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w11</code></td><td class="">1<sup class="anc">[119]</sup></td><td class="">1<sup class="anc">[120]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w12</code></td><td class="">1<sup class="anc">[121]</sup></td><td class="">1<sup class="anc">[122]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w13</code></td><td class="">1<sup class="anc">[123]</sup></td><td class="">1<sup class="anc">[124]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w14</code></td><td class="">1<sup class="anc">[125]</sup></td><td class="">1<sup class="anc">[126]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>act-r0-mcl_wet_r0-w15</code></td><td class="">1<sup class="anc">[127]</sup></td><td class="">1<sup class="anc">[128]</sup></td><td class="">0</td><td class="">ROLLED_BACK</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>duplicate_reply</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>dup-0</code></td><td class="">1<sup class="anc">[129]</sup></td><td class="">1<sup class="anc">[130]</sup></td><td class="">1</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>dup-1</code></td><td class="">1<sup class="anc">[131]</sup></td><td class="">1<sup class="anc">[132]</sup></td><td class="">1</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>dup-2</code></td><td class="">1<sup class="anc">[133]</sup></td><td class="">1<sup class="anc">[134]</sup></td><td class="">1</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>disconnect_resume</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>disc-A</code></td><td class="">1<sup class="anc">[135]</sup></td><td class="">1<sup class="anc">[136]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>disc-B</code></td><td class="">1<sup class="anc">[137]</sup></td><td class="">1<sup class="anc">[138]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr><tr class=""><td class=""><code>disc-C</code></td><td class="">1<sup class="anc">[139]</sup></td><td class="">1<sup class="anc">[140]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>cancel_during_awaiting_recovery</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>cancel-A</code></td><td class="">1<sup class="anc">[141]</sup></td><td class="">1<sup class="anc">[142]</sup></td><td class="">0</td><td class="">ABORTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>human_recover</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>recover-A</code></td><td class="">2<sup class="anc">[143]</sup></td><td class="">2<sup class="anc">[144]</sup></td><td class="">0</td><td class="">COMMITTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><h3><code>human_cancel</code></h3><div class="tablewrap"><table class="redispatch"><thead><tr class=""><th>action_id</th><th>Attempts</th><th>PENDING entries</th><th>Idempotent skips</th><th>Final state</th><th>Assertion</th></tr></thead><tbody><tr class=""><td class=""><code>hcancel-A</code></td><td class="">1<sup class="anc">[145]</sup></td><td class="">1<sup class="anc">[146]</sup></td><td class="">0</td><td class="">ABORTED</td><td class=""><span class="pill ok">no re-dispatch</span></td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 11,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 12,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 13,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 14,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 15,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 16,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 17,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 18,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 19,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 20,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 21,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 22,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 23,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 24,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 25,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 26,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 27,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 28,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 29,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 30,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 31,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 32,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 33,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 34,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 35,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 36,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 37,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 38,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 39,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 40,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 41,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 42,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 43,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 44,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 45,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 46,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 47,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 48,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 49,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 50,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 51,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 52,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 53,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 54,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 55,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 56,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 57,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 58,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 59,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 60,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 61,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 62,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 63,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 64,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 65,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 66,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 67,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 68,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 69,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 70,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 71,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 72,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 73,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 74,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 75,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 76,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 77,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 78,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 79,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 80,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 81,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 82,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 83,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 84,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 85,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 86,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 87,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 88,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 89,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 90,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 91,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 92,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 93,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 94,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 95,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 96,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 97,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 98,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 99,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 100,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 101,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 102,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 103,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 104,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w3&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 105,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 106,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w4&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 107,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 108,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w5&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 109,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 110,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w6&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 111,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 112,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w7&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 113,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 114,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w8&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 115,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 116,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w9&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 117,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 118,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w10&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 119,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 120,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w11&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 121,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 122,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w12&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 123,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 124,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w13&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 125,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 126,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w14&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 127,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 128,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: &quot;act-r0-mcl_wet_r0-w15&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 129,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 130,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-0&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 131,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 132,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-1&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 133,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 134,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: &quot;dup-2&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 135,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 136,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 137,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-B&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 138,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-B&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 139,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-C&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 140,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: &quot;disc-C&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 141,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;cancel_during_awaiting_recovery&quot;,
+      &quot;seq&quot;: &quot;cancel-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 142,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;cancel_during_awaiting_recovery&quot;,
+      &quot;seq&quot;: &quot;cancel-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 143,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_recover&quot;,
+      &quot;seq&quot;: &quot;recover-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 144,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_recover&quot;,
+      &quot;seq&quot;: &quot;recover-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 145,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_cancel&quot;,
+      &quot;seq&quot;: &quot;hcancel-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;to=PENDING&quot;,
+      &quot;id&quot;: 146,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_cancel&quot;,
+      &quot;seq&quot;: &quot;hcancel-A&quot;
+    }
+  ],
+  &quot;section&quot;: &quot;redispatch&quot;
+}
+=== end provenance ===</pre></section><section id="mismatch"><h2>4. Mismatch behavior (loud failures as evidence)</h2><p>A mismatch is EVIDENCE, not a defect to hide: a loud-failure scenario captures the process's <code>stderr</code> and its non-zero exit status. The report quotes the captured failure verbatim — the loud refusal is the readiness signal.</p><h3><code>unit_mismatch</code></h3><p>Captured exit status: <span class="pill ok">non-zero exit (1)</span><sup class="anc">[1]</sup></p><p>Captured stderr (verbatim excerpt):</p><pre class="stderr-quote">Traceback (most recent call last):
+  File &quot;&lt;string&gt;&quot;, line 19, in &lt;module&gt;
+    mcl._ingest_units(cfg, [bad], &quot;solvent_response&quot;)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Data1/ericyang/dry_wet_agent_os/expos/mcl.py&quot;, line 1086, in _ingest_units
+    check_unit_consistency(obs.result.unit, declared, metric=metric)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Data1/ericyang/dry_wet_agent_os/expos/domain.py&quot;, line 126, in check_unit_consistency
+    raise DomainError(
+    ...&lt;3 lines&gt;...
+    )
+expos.domain.DomainError: metric 'solvent_response': observed unit 'debye' != declared unit 'arbitrary_unit'; units of different dimension do not compare (no implicit conversion)</pre><sup class="anc">[2]</sup><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;exit_status.txt&quot;,
+      &quot;field_path&quot;: &quot;exit&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;unit_mismatch&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;stderr.txt&quot;,
+      &quot;field_path&quot;: &quot;excerpt&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;unit_mismatch&quot;,
+      &quot;seq&quot;: null
+    }
+  ],
+  &quot;section&quot;: &quot;mismatch&quot;
+}
+=== end provenance ===</pre></section><section id="volume"><h2>5. Volume invariants (independent replay)</h2><p>Volume conservation is recomputed INDEPENDENTLY by the imported <code>ActionLedger</code> replay: it re-walks the hash-chained log, re-applies every COMMITTED transfer as a balanced double-entry (source &minus;v, dest +v), and exposes the running per-well balance. A conserved ledger nets to zero across all legs; losses (evaporation / dead volume) are EXPLICIT loss legs, never silent. A tampered ledger byte breaks the chain and is flagged here — the same break changes the integrity footer's ledger hash.</p><div class="tablewrap"><table class="volume"><thead><tr class=""><th>Scenario</th><th>Chain replay</th><th>Net moved (Σ legs)</th><th>Loss legs (uL)</th><th>Committed wells</th><th>Conservation</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>exact_success</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[1]</sup></td><td class="">0</td><td class="">16</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>sensed_mismatch</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[2]</sup></td><td class="">0</td><td class="">0</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>partial_execution</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[3]</sup></td><td class="">0</td><td class="">15</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>timeout_before_confirm</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[4]</sup></td><td class="">0</td><td class="">0</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>duplicate_reply</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[5]</sup></td><td class="">0</td><td class="">3</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>disconnect_resume</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[6]</sup></td><td class="">0</td><td class="">3</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>cancel_during_awaiting_recovery</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[7]</sup></td><td class="">0</td><td class="">0</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>human_recover</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[8]</sup></td><td class="">0</td><td class="">1</td><td class=""><span class="pill ok">conserved</span></td></tr><tr class=""><td class="rowhead"><code>human_cancel</code></td><td class=""><span class="pill ok">verified</span></td><td class="">0<sup class="anc">[9]</sup></td><td class="">0</td><td class="">0</td><td class=""><span class="pill ok">conserved</span></td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;exact_success&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;sensed_mismatch&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;partial_execution&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;timeout_before_confirm&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;duplicate_reply&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;disconnect_resume&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;cancel_during_awaiting_recovery&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_recover&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;net_moved&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_cancel&quot;,
+      &quot;seq&quot;: null
+    }
+  ],
+  &quot;section&quot;: &quot;volume&quot;
+}
+=== end provenance ===</pre></section><section id="differential"><h2>6. Differential results (envelope containment)</h2><p>The sim&ndash;real differential gate accepts a real result only when it lies INSIDE the simulator-declared tolerance envelope (a containment test; the envelope is never recomputed). A positive sample passes within the envelope; a negative (drift) sample is rejected. The declared envelope is echoed below WITH its provenance flags shown.</p><div class="tablewrap"><table class="diff"><thead><tr class=""><th>Scenario</th><th>Gate</th><th>Failing facets</th><th>Findings</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>diff_positive</code></td><td class=""><span class="pill ok">PASS (within envelope)</span><sup class="anc">[1]</sup></td><td class="">(none)</td><td class="">—</td></tr><tr class="tamper"><td class="rowhead"><code>diff_negative</code></td><td class=""><span class="pill bad">REJECT (drift)</span><sup class="anc">[2]</sup></td><td class="">device_tolerance</td><td class=""><ul><li>device_tolerance/volume_tolerance_exceeded: observed 105.0 uL deviates 5 uL from requested 100.0 uL &gt; allowance 2 uL (declared envelope)</li><li>device_tolerance/volume_tolerance_exceeded: observed 105.0 uL deviates 5 uL from requested 100.0 uL &gt; allowance 2 uL (declared envelope)</li><li>device_tolerance/volume_tolerance_exceeded: observed 105.0 uL deviates 5 uL from requested 100.0 uL &gt; allowance 2 uL (declared envelope)</li></ul></td></tr></tbody></table></div><div class="nameplate"><div class="kv"><span class="k">Envelope source</span><span class="v">vendor_spec_placeholder</span></div><div class="kv"><span class="k">Declared bands</span><span class="v">7</span></div><div class="kv"><span class="k">Provenance flags</span><span class="v"><span class="pill warn">vendor_spec_placeholder (NOT gravimetric)</span> <span class="pill reserved">never-tighter discipline declared</span> <span class="pill reserved">random/CV channel reserved (N≥10)</span></span></div></div><p class="note">These are VENDOR-SPEC placeholder tolerances, shown with their own flags: they may only be WIDENED, never tightened, until real gravimetric data exists (the declared never-tighter discipline).</p><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;diff_report.json&quot;,
+      &quot;field_path&quot;: &quot;passed&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;diff_positive&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;diff_report.json&quot;,
+      &quot;field_path&quot;: &quot;passed&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;diff_negative&quot;,
+      &quot;seq&quot;: null
+    }
+  ],
+  &quot;section&quot;: &quot;differential&quot;
+}
+=== end provenance ===</pre></section><section id="human"><h2>7. Human intervention (recovery / cancel arcs)</h2><p>Human-in-the-loop recovery is a first-class ledger arc: a sensed mismatch parks the action in AWAITING_RECOVERY; an operator either recovers it (a distinct auditable attempt++, re-sensed to COMMITTED) or abandons/cancels it (ROLLED_BACK / ABORTED). The arc below is reconstructed from the append-only ledger transitions.</p><div class="tablewrap"><table class="human"><thead><tr class=""><th>Scenario</th><th>action_id</th><th>Ledger arc</th><th>Attempts</th><th>Terminal</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>human_recover</code></td><td class=""><code>recover-A</code></td><td class=""><span class="arc-node">PLANNED</span><span class="arrow">&rarr;</span><span class="arc-node">PENDING</span><span class="arrow">&rarr;</span><span class="arc-node">AWAITING_RECOVERY</span><span class="arrow">&rarr;</span><span class="arc-node">PENDING</span><span class="arrow">&rarr;</span><span class="arc-node">COMMITTED</span></td><td class="">2<sup class="anc">[1]</sup></td><td class=""><span class="pill ok">recovered</span></td></tr><tr class=""><td class="rowhead"><code>human_cancel</code></td><td class=""><code>hcancel-A</code></td><td class=""><span class="arc-node">PLANNED</span><span class="arrow">&rarr;</span><span class="arc-node">PENDING</span><span class="arrow">&rarr;</span><span class="arc-node">AWAITING_RECOVERY</span><span class="arrow">&rarr;</span><span class="arc-node">ABORTED</span></td><td class="">1<sup class="anc">[2]</sup></td><td class=""><span class="pill ok">canceled</span></td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_recover&quot;,
+      &quot;seq&quot;: &quot;recover-A&quot;
+    },
+    {
+      &quot;event_kind&quot;: &quot;action_ledger.jsonl&quot;,
+      &quot;field_path&quot;: &quot;attempt&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;human_cancel&quot;,
+      &quot;seq&quot;: &quot;hcancel-A&quot;
+    }
+  ],
+  &quot;section&quot;: &quot;human&quot;
+}
+=== end provenance ===</pre></section><section id="limits"><h2>8. Known limits (machine-derived)</h2><p>Known limits are derived by machine, not hand-authored: the tolerance-envelope placeholder flags (read from the envelope config), the EXP013 domain-compliance lint nudges (the lint run programmatically), acceptance-face debt (parsed from the domain YAMLs), and TODO notes carried in the domain observables (parsed likewise).</p><ul><li>Differential tolerance envelope is a <strong>vendor-spec placeholder</strong> (Opentrons white-paper / ISO 8655 seed), NOT this instrument's measured gravimetric data — source flag <code>vendor_spec_placeholder</code>.</li><li>The random/CV (precision) differential channel is <strong>reserved</strong>: it needs N&ge;10 replicate observations per volume; the current per-action ledger carries one observed volume, so only the systematic (accuracy) channel is checked.</li><li>EXP013 domains/coating.yaml: [provider-preview] domain declares no provider: -- both shipped domains now carry a DomainProvider; consider consolidating this domain's tables behind one too (nudge, not error)</li><li>EXP013 domains/crystal.yaml: [provider-preview] domain declares no provider: -- both shipped domains now carry a DomainProvider; consider consolidating this domain's tables behind one too (nudge, not error)</li><li>EXP013 domains/solvent_screen_flipped.yaml: [provider-preview] domain declares no provider: -- both shipped domains now carry a DomainProvider; consider consolidating this domain's tables behind one too (nudge, not error)</li><li>domains/catalyst_screen.yaml: observable 'dry_reactivity' carries a TODO — TODO(M20): dry metric label not yet a first-class objective metric (same debt as solvent_screen's dry_polarity) -- recorded so it stays machine-visible.</li><li>domains/solvent_screen.yaml: observable 'dry_polarity' carries a TODO — TODO(M20): the dry metric label rides the wet observation's secondary channel and is not yet a first-class objective metric -- recorded here so the debt is machine-visible rather than a forgotten comment.</li></ul></section><section id="safesteps"><h2>Minimal safe steps to the first real machine</h2><p>The minimal safe path to wiring the first real machine. Every status cell is machine-verified against the repo (guard-test files present, lint rules registered, placeholder flags set or cleared, calibration schema reserved-vs-wired) — the step descriptions are fixed template text, no status is hand-set. A <em>ready</em> row is a satisfied prerequisite; an <em>open</em> / <em>reserved</em> row is work that remains before a physical instrument is trusted.</p><div class="tablewrap"><table class="safesteps"><thead><tr class=""><th>#</th><th>Step</th><th>Status</th><th>Machine basis</th></tr></thead><tbody><tr class=""><td class="stepnum">1</td><td>Physical-action transaction ledger is append-only and hash-chained</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">expos/adapters/wet/action_ledger.py: ActionLedger.verify + _LEGAL_TRANSITIONS</td></tr><tr class=""><td class="stepnum">2</td><td>Crash / resume discriminative guard tests exist</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">tests/test_phase4_interruption.py + tests/test_realwet_transactions.py</td></tr><tr class=""><td class="stepnum">3</td><td>Physical-dispatch mcl wiring + harness-isolation guard tests exist</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">tests/test_phase4_wiring.py</td></tr><tr class=""><td class="stepnum">4</td><td>Sim&ndash;real differential gate present with a declared tolerance envelope</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">expos/adapters/wet/differential_gate.py + tolerances_vendor_placeholder.json</td></tr><tr class=""><td class="stepnum">5</td><td>Domain-compliance lint rule is registered</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">scripts/expos_lint.py: RULES contains EXP013</td></tr><tr class=""><td class="stepnum">6</td><td>All shipped domain acceptance faces are landed (not merely declared)</td><td class="stepstatus"><span class="pill ok">ready</span></td><td class="note">domains/*.yaml: every acceptance_faces[*].status == landed</td></tr><tr class=""><td class="stepnum">7</td><td>Replace the vendor-spec tolerance envelope with real gravimetric data</td><td class="stepstatus"><span class="pill warn">OPEN (placeholder present)</span></td><td class="note">tolerances_vendor_placeholder.json _meta.source == vendor_spec_placeholder</td></tr><tr class=""><td class="stepnum">8</td><td>Wire the random/CV precision channel (needs an N&ge;10 replicate ledger)</td><td class="stepstatus"><span class="pill reserved">reserved</span></td><td class="note">envelope _meta.n_replicates_min declared; systematic-only gate today</td></tr><tr class=""><td class="stepnum">9</td><td>Add the calibration / deck-setup action schema (excluded from idempotency)</td><td class="stepstatus"><span class="pill reserved">reserved (not wired)</span></td><td class="note">expos/adapters/wet/calibration_schema.json present?  derive_action_id reserves it</td></tr></tbody></table></div></section><section id="integrity"><h2>Integrity footer</h2><div class="nameplate"><div class="kv"><span class="k">evidence_index sha256</span><span class="v"><code>0f8740c7</code></span></div></div><div class="tablewrap"><table class="integ"><thead><tr class=""><th>Scenario</th><th>events.jsonl sha256</th><th>action_ledger.jsonl sha256</th><th>Ledger chain</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>exact_success</code></td><td class=""><code>f082169e</code></td><td class=""><code>84a52553</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>sensed_mismatch</code></td><td class=""><code>65092dbf</code></td><td class=""><code>f6fefa4e</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>partial_execution</code></td><td class=""><code>e1b8f5dc</code></td><td class=""><code>70f95906</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>timeout_before_confirm</code></td><td class=""><code>ccfa679e</code></td><td class=""><code>390d3ed5</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>duplicate_reply</code></td><td class="">n/a</td><td class=""><code>c52e1037</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>disconnect_resume</code></td><td class="">n/a</td><td class=""><code>82b8b89e</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>cancel_during_awaiting_recovery</code></td><td class="">n/a</td><td class=""><code>e84b6c7e</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>human_recover</code></td><td class="">n/a</td><td class=""><code>e481d208</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>human_cancel</code></td><td class="">n/a</td><td class=""><code>228524a5</code></td><td class=""><span class="pill ok">verified</span></td></tr><tr class=""><td class="rowhead"><code>unit_mismatch</code></td><td class="">n/a</td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>diff_positive</code></td><td class="">n/a</td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>diff_negative</code></td><td class="">n/a</td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I1</code></td><td class=""><code>6b149bfb</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I2</code></td><td class=""><code>122412ec</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I3</code></td><td class=""><code>b6c29566</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I4</code></td><td class=""><code>a6380faf</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I5</code></td><td class=""><code>886e181a</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr><tr class=""><td class="rowhead"><code>crash_I6</code></td><td class=""><code>37ced2bb</code></td><td class="">n/a</td><td class=""><span class="pill reserved">not provided</span></td></tr></tbody></table></div><ul><li>Evidence directory pinned by: the <code>evidence_index.json</code> sha, each scenario's <code>events.jsonl</code> high-water sha, and each physical <code>action_ledger.jsonl</code> content sha (never mtime).</li><li>Independent recomputation: the ledger conservation + hash chain are re-verified here by the imported <code>ActionLedger</code> replay, not trusted from the evidence.</li><li>Re-run this generator against the same evidence directory to reproduce this report byte-for-byte.</li></ul><div class="footer-digest"><div class="kv"><span class="k">report_digest</span><span class="v"><code>8079fbc5bf0167d11e958690a8fbb9b3ac10884bbc35ff6ac0ac99ed246d3769</code></span></div><p class="note">report_digest = sha256 over the pinned evidence_index sha + every scenario's events / ledger high-water shas (sorted by scenario). Any tampered input byte changes a high-water sha and this digest, and flips the corresponding ledger chain status to BROKEN.</p></div></section></main></body></html>

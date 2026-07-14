@@ -1,0 +1,1601 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Adaptive Dry–Wet–Agent Scientific Loop — Closing Report</title><style>
+:root{--bg:#ffffff;--fg:#1b1f24;--muted:#5b6570;--line:#d8dee4;--head:#0f172a;
+--ok:#0f7b3f;--okbg:#e7f6ec;--bad:#b4232a;--badbg:#fbe9ea;--warn:#8a5a00;--warnbg:#fdf3e0;
+--strong:#0f7b3f;--reject:#b4232a;--undec:#5b6570;--accent:#1f4f82;--card:#f6f8fa;}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ec;--muted:#9aa4ae;
+--line:#2a323b;--head:#e6e9ec;--ok:#4ecb7b;--okbg:#122a1c;--bad:#f0868b;--badbg:#2c1416;
+--warn:#e0b24a;--warnbg:#2a2110;--strong:#4ecb7b;--reject:#f0868b;--undec:#9aa4ae;
+--accent:#7fb0e8;--card:#161b22;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+main{max-width:960px;margin:0 auto;padding:32px 20px 80px;}
+.masthead{border-bottom:2px solid var(--head);padding-bottom:18px;margin-bottom:28px;}
+h1{font-size:26px;margin:0 0 6px;color:var(--head);letter-spacing:-.01em;}
+.subtitle{font-size:15px;color:var(--muted);margin:0 0 4px;}
+.asof{font-size:12px;color:var(--muted);margin:0 0 14px;}
+h2{font-size:19px;margin:38px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line);color:var(--head);}
+h3{font-size:15px;margin:22px 0 8px;color:var(--head);}
+p{margin:8px 0;}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;}
+ul{margin:8px 0;padding-left:22px;}
+li{margin:4px 0;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+background:var(--card);padding:1px 5px;border-radius:4px;word-break:break-all;}
+.kv{display:flex;gap:10px;padding:3px 0;font-size:13.5px;}
+.kv .k{color:var(--muted);min-width:150px;}
+.kv .v{font-weight:600;}
+.nameplate{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:2px 24px;margin:10px 0;padding:14px 16px;background:var(--card);border-radius:8px;}
+.tablewrap{overflow-x:auto;margin:14px 0;}
+table{border-collapse:collapse;width:100%;font-size:13px;}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;}
+th{background:var(--card);color:var(--head);font-weight:600;white-space:nowrap;}
+td.rowhead{font-weight:600;background:var(--card);white-space:nowrap;}
+tr.mismatch td{background:var(--badbg);}
+tr.diff td.diffcell{background:var(--warnbg);}
+td.ok,.pill.ok{color:var(--ok);}
+td.bad,.pill.bad{color:var(--bad);font-weight:600;}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;}
+.pill.ok{background:var(--okbg);color:var(--ok);}
+.pill.bad{background:var(--badbg);color:var(--bad);}
+.pill.undec{background:var(--card);color:var(--undec);}
+.status-supported{color:var(--strong);font-weight:600;}
+.status-rejected{color:var(--reject);font-weight:600;}
+.status-insufficient{color:var(--undec);}
+sup.anc{color:var(--accent);font-size:10px;font-weight:600;padding-left:1px;cursor:help;}
+.anchor-block{background:var(--card);border:1px dashed var(--line);border-radius:6px;
+padding:10px 12px;font-size:11px;line-height:1.4;color:var(--muted);overflow-x:auto;
+white-space:pre;margin:10px 0 4px;}
+.fp{font-family:ui-monospace,monospace;font-size:12px;}
+.fp.from{color:var(--muted);}
+.fp.to{color:var(--accent);font-weight:600;}
+.arrow{margin:0 8px;color:var(--muted);}
+.chart{margin:16px 0;}
+.evalue-chart{width:100%;height:auto;background:var(--card);border-radius:8px;}
+.evalue-chart .axis{stroke:var(--muted);stroke-width:1;}
+.evalue-chart .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3;}
+.evalue-chart .tick{fill:var(--muted);font-size:10px;}
+.evalue-chart .series{fill:none;stroke-width:2;}
+.evalue-chart .dot{stroke:var(--bg);stroke-width:1;}
+figcaption{font-size:12px;color:var(--muted);margin-top:6px;}
+.legend{margin:6px 0;font-size:12px;display:flex;flex-wrap:wrap;gap:14px;}
+.legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--muted);}
+.legend-item .swatch{width:11px;height:11px;border-radius:2px;display:inline-block;}
+.s-flat .swatch,.s-flat{--s:#8a8f96;} .evalue-chart .s-flat{stroke:#8a8f96;} .s-flat .swatch{background:#8a8f96;}
+.s-zero .swatch,.s-zero{--s:#c98a00;} .evalue-chart .s-zero{stroke:#c98a00;} .s-zero .swatch{background:#c98a00;}
+.s-strong .swatch{background:#0f7b3f;} .evalue-chart .s-strong{stroke:#0f7b3f;}
+.s-flipped .swatch{background:#b4232a;} .evalue-chart .s-flipped{stroke:#b4232a;}
+.s-stage3 .swatch{background:#1f4f82;} .evalue-chart .s-stage3{stroke:#1f4f82;}
+.dot.d-supported{fill:#0f7b3f;} .dot.d-rejected{fill:#b4232a;} .dot.d-insufficient{fill:#8a8f96;}
+.boundary{background:var(--warnbg);border:1px solid var(--warn);border-radius:8px;padding:14px 18px;}
+.boundary h3{margin-top:0;color:var(--warn);}
+.quote{font-style:italic;border-left:4px solid var(--accent);padding:8px 14px;margin:12px 0;
+background:var(--card);border-radius:0 6px 6px 0;}
+.footer-digest{background:var(--card);border-radius:8px;padding:14px 16px;margin-top:14px;}
+</style></head><body><main><header class="masthead"><h1>Adaptive Dry–Wet–Agent Scientific Loop — Closing Report</h1><p class="subtitle">Four-condition joint closing run (flat / consistent-zero / consistent-strong / flipped) plus the Stage-3 LLM-backend smoke run — Adaptive Dry–Wet–Agent scientific loop.</p><p class="asof">Data as of 2026-07-13T07:39:54.763285+00:00 (derived from the latest run_stop event).</p><p>This report is regenerated as a pure function of the run directories below: every number is read from an append-only <code>events.jsonl</code> event stream, carries a provenance anchor to its source event, and is pinned by a content hash in the integrity footer. No sentence is hand-written; each is selected from machine fields. See the scope-and-limits section for the honest boundary of the claim.</p><div class="nameplate"><div class="kv"><span class="k">Domain</span><span class="v">solvent_screen<sup class="anc">[1]</sup></span></div><div class="kv"><span class="k">Seed</span><span class="v">7<sup class="anc">[2]</sup></span></div><div class="kv"><span class="k">Rounds target</span><span class="v">4<sup class="anc">[3]</sup></span></div><div class="kv"><span class="k">Replicates / well</span><span class="v">8<sup class="anc">[4]</sup></span></div><div class="kv"><span class="k">Loop</span><span class="v">mcl<sup class="anc">[5]</sup></span></div><div class="kv"><span class="k">Conditions</span><span class="v">5</span></div></div><p>Runs in scope:</p><ul><li><code>corun_flat</code> — insufficient (honestly undecided — evidence below decisive threshold)</li><li><code>corun_consistent_zero</code> — insufficient (honestly undecided — evidence below decisive threshold)</li><li><code>corun_consistent_strong</code> — supported (supported by decisive evidence)</li><li><code>corun_flipped</code> — rejected (rejected by decisive evidence)</li><li><code>llm_smoke_stage3</code> — supported (supported by decisive evidence)</li></ul><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;run_start&quot;,
+      &quot;field_path&quot;: &quot;payload.domain&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 0
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_start&quot;,
+      &quot;field_path&quot;: &quot;payload.seed&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 0
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_start&quot;,
+      &quot;field_path&quot;: &quot;payload.rounds_target&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 0
+    },
+    {
+      &quot;event_kind&quot;: &quot;config&quot;,
+      &quot;field_path&quot;: &quot;domain_config.replicates&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: null
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_start&quot;,
+      &quot;field_path&quot;: &quot;payload.loop&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 0
+    }
+  ],
+  &quot;section&quot;: &quot;masthead&quot;
+}
+=== end provenance ===</pre></header><section id="adjudication"><h2>Adjudication table — measured vs expected verdict</h2><p><strong>5 / 5</strong> runs reproduce their expected verdict from the event stream. The expected verdict is the acceptance oracle (supplied as a parameter); the measured verdict is the terminal round's <code>claim_decision.decision_status</code> recomputed here.</p><div class="tablewrap"><table class="adj"><thead><tr class=""><th>Run</th><th>Expected verdict</th><th>Measured verdict</th><th>Terminal effect</th><th>Match</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>corun_flat</code></td><td class="">insufficient</td><td class="">insufficient (honestly undecided — evidence below decisive threshold)<sup class="anc">[2]</sup></td><td class="">+2.602085e-18<sup class="anc">[1]</sup></td><td class=""><span class="pill ok">match</span></td></tr><tr class=""><td class="rowhead"><code>corun_consistent_zero</code></td><td class="">insufficient</td><td class="">insufficient (honestly undecided — evidence below decisive threshold)<sup class="anc">[4]</sup></td><td class="">+0.00086575<sup class="anc">[3]</sup></td><td class=""><span class="pill ok">match</span></td></tr><tr class=""><td class="rowhead"><code>corun_consistent_strong</code></td><td class="">supported</td><td class="">supported (supported by decisive evidence)<sup class="anc">[6]</sup></td><td class="">+0.3193285<sup class="anc">[5]</sup></td><td class=""><span class="pill ok">match</span></td></tr><tr class=""><td class="rowhead"><code>corun_flipped</code></td><td class="">rejected</td><td class="">rejected (rejected by decisive evidence)<sup class="anc">[8]</sup></td><td class="">-0.08592463<sup class="anc">[7]</sup></td><td class=""><span class="pill ok">match</span></td></tr><tr class=""><td class="rowhead"><code>llm_smoke_stage3</code></td><td class="">supported</td><td class="">supported (supported by decisive evidence)<sup class="anc">[10]</sup></td><td class="">+0.3193285<sup class="anc">[9]</sup></td><td class=""><span class="pill ok">match</span></td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    }
+  ],
+  &quot;section&quot;: &quot;adjudication&quot;
+}
+=== end provenance ===</pre></section><section id="comparison"><h2>Cross-condition comparison</h2><p class="note">Rows shaded across a row indicate a field whose value is not identical across all conditions — the discriminative axes of the joint run. Note the cumulative e-product is identical for the strong and flipped conditions: the e-value measures evidence magnitude; the SIGN of the effect (and hence support vs rejection) is the face discriminator, exactly as the gate-12 fingerprint isolates.</p><div class="tablewrap"><table class="cmp"><thead><tr class=""><th>Field</th><th>corun_flat</th><th>corun_consistent_zero</th><th>corun_consistent_strong</th><th>corun_flipped</th><th>llm_smoke_stage3</th></tr></thead><tbody><tr class="diff"><td class="rowhead">Terminal decision_status</td><td class="diffcell"><span class="status-insufficient">insufficient</span><sup class="anc">[1]</sup></td><td class="diffcell"><span class="status-insufficient">insufficient</span><sup class="anc">[2]</sup></td><td class="diffcell"><span class="status-supported">supported</span><sup class="anc">[3]</sup></td><td class="diffcell"><span class="status-rejected">rejected</span><sup class="anc">[4]</sup></td><td class="diffcell"><span class="status-supported">supported</span><sup class="anc">[5]</sup></td></tr><tr class="diff"><td class="rowhead">Terminal effect (mean paired diff)</td><td class="diffcell">+2.602085e-18<sup class="anc">[6]</sup></td><td class="diffcell">+0.00086575<sup class="anc">[7]</sup></td><td class="diffcell">+0.3193285<sup class="anc">[8]</sup></td><td class="diffcell">-0.08592463<sup class="anc">[9]</sup></td><td class="diffcell">+0.3193285<sup class="anc">[10]</sup></td></tr><tr class="diff"><td class="rowhead">Terminal e-value (evidence_factor)</td><td class="diffcell">0<sup class="anc">[11]</sup></td><td class="diffcell">0.615623<sup class="anc">[12]</sup></td><td class="diffcell">10451.9<sup class="anc">[13]</sup></td><td class="diffcell">10451.9<sup class="anc">[14]</sup></td><td class="diffcell">102.235<sup class="anc">[15]</sup></td></tr><tr class="diff"><td class="rowhead">Terminal evidence strength</td><td class="diffcell">none<sup class="anc">[16]</sup></td><td class="diffcell">none<sup class="anc">[17]</sup></td><td class="diffcell">very_strong<sup class="anc">[18]</sup></td><td class="diffcell">very_strong<sup class="anc">[19]</sup></td><td class="diffcell">very_strong<sup class="anc">[20]</sup></td></tr><tr class="diff"><td class="rowhead">Cumulative e-product</td><td class="diffcell">0</td><td class="diffcell">0.297363</td><td class="diffcell">1.11683e+10</td><td class="diffcell">1.11683e+10</td><td class="diffcell">1033.71</td></tr><tr class="diff"><td class="rowhead">Terminal 95% CS bounds</td><td class="diffcell">[-0.003167657, 0.003167657]<sup class="anc">[21]</sup></td><td class="diffcell">[-0.0009532796, 0.00268478]<sup class="anc">[22]</sup></td><td class="diffcell">[0.3117813, 0.3268757]<sup class="anc">[23]</sup></td><td class="diffcell">[-0.0897324, -0.08211685]<sup class="anc">[24]</sup></td><td class="diffcell">[0.3088548, 0.3298022]<sup class="anc">[25]</sup></td></tr><tr class="diff"><td class="rowhead">Terminal knowledge fingerprint</td><td class="diffcell"><code>003cae6f</code><sup class="anc">[26]</sup></td><td class="diffcell"><code>003cae6f</code><sup class="anc">[27]</sup></td><td class="diffcell"><code>003cae6f</code><sup class="anc">[28]</sup></td><td class="diffcell"><code>809ca7a1</code><sup class="anc">[29]</sup></td><td class="diffcell"><code>003cae6f</code><sup class="anc">[30]</sup></td></tr><tr class="diff"><td class="rowhead">Knowledge-fingerprint migrations</td><td class="diffcell">0</td><td class="diffcell">0</td><td class="diffcell">0</td><td class="diffcell">1</td><td class="diffcell">0</td></tr><tr class=""><td class="rowhead">Terminal promoted set</td><td class="diffcell">cand_ethanol, cand_acetonitrile<sup class="anc">[31]</sup></td><td class="diffcell">cand_ethanol, cand_acetonitrile<sup class="anc">[32]</sup></td><td class="diffcell">cand_ethanol, cand_acetonitrile<sup class="anc">[33]</sup></td><td class="diffcell">cand_ethanol, cand_acetonitrile<sup class="anc">[34]</sup></td><td class="diffcell">cand_ethanol, cand_acetonitrile<sup class="anc">[35]</sup></td></tr><tr class="diff"><td class="rowhead">Completed rounds</td><td class="diffcell">4<sup class="anc">[36]</sup></td><td class="diffcell">4<sup class="anc">[37]</sup></td><td class="diffcell">4<sup class="anc">[38]</sup></td><td class="diffcell">4<sup class="anc">[39]</sup></td><td class="diffcell">2<sup class="anc">[40]</sup></td></tr><tr class=""><td class="rowhead">Exit status</td><td class="diffcell">success<sup class="anc">[41]</sup></td><td class="diffcell">success<sup class="anc">[42]</sup></td><td class="diffcell">success<sup class="anc">[43]</sup></td><td class="diffcell">success<sup class="anc">[44]</sup></td><td class="diffcell">success<sup class="anc">[45]</sup></td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 11,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 12,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 13,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 14,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 15,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_strength&quot;,
+      &quot;id&quot;: 16,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_strength&quot;,
+      &quot;id&quot;: 17,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_strength&quot;,
+      &quot;id&quot;: 18,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_strength&quot;,
+      &quot;id&quot;: 19,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_strength&quot;,
+      &quot;id&quot;: 20,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.ci&quot;,
+      &quot;id&quot;: 21,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.ci&quot;,
+      &quot;id&quot;: 22,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.ci&quot;,
+      &quot;id&quot;: 23,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.ci&quot;,
+      &quot;id&quot;: 24,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.ci&quot;,
+      &quot;id&quot;: 25,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 26,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 27,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 28,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 29,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 30,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 28
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 31,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 32,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 33,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 34,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 35,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 35
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.completed_rounds&quot;,
+      &quot;id&quot;: 36,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.completed_rounds&quot;,
+      &quot;id&quot;: 37,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.completed_rounds&quot;,
+      &quot;id&quot;: 38,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.completed_rounds&quot;,
+      &quot;id&quot;: 39,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.completed_rounds&quot;,
+      &quot;id&quot;: 40,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 55
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.exit_status&quot;,
+      &quot;id&quot;: 41,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.exit_status&quot;,
+      &quot;id&quot;: 42,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.exit_status&quot;,
+      &quot;id&quot;: 43,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.exit_status&quot;,
+      &quot;id&quot;: 44,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 109
+    },
+    {
+      &quot;event_kind&quot;: &quot;run_stop&quot;,
+      &quot;field_path&quot;: &quot;payload.exit_status&quot;,
+      &quot;id&quot;: 45,
+      &quot;round&quot;: null,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 55
+    }
+  ],
+  &quot;section&quot;: &quot;comparison&quot;
+}
+=== end provenance ===</pre></section><section id="knowledge"><h2>Knowledge-fingerprint chain and migration</h2><p>The knowledge fingerprint is the sha256 content hash of the compiled knowledge view consumed at each round. It stays stable while the evidence does not overturn a claim, and migrates when a claim is decisively rewritten by wet data — the flipped condition migrates once, its terminal knowledge face rebuilt by the sign-reversed effect.</p><div class="tablewrap"><table class="kfp"><thead><tr class=""><th>Run</th><th>round 0</th><th>round 1</th><th>round 2</th><th>round 3</th><th>Migration</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>corun_flat</code></td><td class=""><code>003cae6f</code><sup class="anc">[1]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[2]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[3]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[4]</sup></td><td class="">stable</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_zero</code></td><td class=""><code>003cae6f</code><sup class="anc">[5]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[6]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[7]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[8]</sup></td><td class="">stable</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_strong</code></td><td class=""><code>003cae6f</code><sup class="anc">[9]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[10]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[11]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[12]</sup></td><td class="">stable</td></tr><tr class=""><td class="rowhead"><code>corun_flipped</code></td><td class=""><code>003cae6f</code><sup class="anc">[13]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[14]</sup></td><td class=""><code>809ca7a1</code><sup class="anc">[15]</sup></td><td class=""><code>809ca7a1</code><sup class="anc">[16]</sup></td><td class=""><span class="fp from">003cae6f</span><span class="arrow">&rarr;</span><span class="fp to">809ca7a1</span></td></tr><tr class=""><td class="rowhead"><code>llm_smoke_stage3</code></td><td class=""><code>003cae6f</code><sup class="anc">[17]</sup></td><td class=""><code>003cae6f</code><sup class="anc">[18]</sup></td><td class="">—</td><td class="">—</td><td class="">stable</td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 1
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 28
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 55
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 1
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 28
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 55
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 1
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 28
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 11,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 55
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 12,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 13,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 1
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 14,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 28
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 15,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 55
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 16,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 82
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 17,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 1
+    },
+    {
+      &quot;event_kind&quot;: &quot;knowledge_updated&quot;,
+      &quot;field_path&quot;: &quot;payload.fingerprint&quot;,
+      &quot;id&quot;: 18,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 28
+    }
+  ],
+  &quot;section&quot;: &quot;knowledge&quot;
+}
+=== end provenance ===</pre></section><section id="evalue"><h2>E-value evidence trajectory</h2><p>The e-value accumulates evidence across rounds. The strong and flipped conditions cross into decisive evidence at the same rate (identical magnitudes); the flat and zero conditions never leave the undecided floor — honestly undecided, not failed.</p><div class="legend"><span class="legend-item s-flat"><span class="swatch"></span>corun_flat</span><span class="legend-item s-zero"><span class="swatch"></span>corun_consistent_zero</span><span class="legend-item s-strong"><span class="swatch"></span>corun_consistent_strong</span><span class="legend-item s-flipped"><span class="swatch"></span>corun_flipped</span><span class="legend-item s-stage3"><span class="swatch"></span>llm_smoke_stage3</span></div><figure class="chart"><svg viewBox="0 0 720 300" class="evalue-chart" role="img" aria-label="Per-round e-value trajectories, log scale"><line class="axis" x1="54" y1="20" x2="54" y2="260"/><line class="axis" x1="54" y1="260" x2="600" y2="260"/><line class="grid" x1="54" y1="260.0" x2="600" y2="260.0"/><text class="tick" x="46" y="263.0">1e-6</text><line class="grid" x1="54" y1="236.04598101266714" x2="600" y2="236.04598101266714"/><text class="tick" x="46" y="239.04598101266714">1e-5</text><line class="grid" x1="54" y1="212.09196202533428" x2="600" y2="212.09196202533428"/><text class="tick" x="46" y="215.09196202533428">1e-4</text><line class="grid" x1="54" y1="188.13794303800145" x2="600" y2="188.13794303800145"/><text class="tick" x="46" y="191.13794303800145">1e-3</text><line class="grid" x1="54" y1="164.1839240506686" x2="600" y2="164.1839240506686"/><text class="tick" x="46" y="167.1839240506686">1e-2</text><line class="grid" x1="54" y1="140.22990506333576" x2="600" y2="140.22990506333576"/><text class="tick" x="46" y="143.22990506333576">1e-1</text><line class="grid" x1="54" y1="116.27588607600289" x2="600" y2="116.27588607600289"/><text class="tick" x="46" y="119.27588607600289">1e0</text><line class="grid" x1="54" y1="92.32186708867005" x2="600" y2="92.32186708867005"/><text class="tick" x="46" y="95.32186708867005">1e1</text><line class="grid" x1="54" y1="68.36784810133719" x2="600" y2="68.36784810133719"/><text class="tick" x="46" y="71.36784810133719">1e2</text><line class="grid" x1="54" y1="44.41382911400434" x2="600" y2="44.41382911400434"/><text class="tick" x="46" y="47.41382911400434">1e3</text><line class="grid" x1="54" y1="20.459810126671503" x2="600" y2="20.459810126671503"/><text class="tick" x="46" y="23.459810126671503">1e4</text><line class="grid" x1="54" y1="-3.494208860661363" x2="600" y2="-3.494208860661363"/><text class="tick" x="46" y="-0.49420886066136305">1e5</text><text class="tick" x="52.0" y="276">r0</text><text class="tick" x="234.0" y="276">r1</text><text class="tick" x="416.0" y="276">r2</text><text class="tick" x="598.0" y="276">r3</text><polyline class="series s-flat" points="54.00,260.00 236.00,260.00 418.00,260.00 600.00,260.00"/><circle class="dot d-insufficient" cx="54.00" cy="260.00" r="4.0"><title>corun_flat r0: e=0 status=insufficient</title></circle><circle class="dot d-insufficient" cx="236.00" cy="260.00" r="4.0"><title>corun_flat r1: e=0 status=insufficient</title></circle><circle class="dot d-insufficient" cx="418.00" cy="260.00" r="4.0"><title>corun_flat r2: e=0 status=insufficient</title></circle><circle class="dot d-insufficient" cx="600.00" cy="260.00" r="4.0"><title>corun_flat r3: e=0 status=insufficient</title></circle><polyline class="series s-zero" points="54.00,117.54 236.00,118.80 418.00,120.06 600.00,121.32"/><circle class="dot d-insufficient" cx="54.00" cy="117.54" r="4.0"><title>corun_consistent_zero r0: e=0.885786 status=insufficient</title></circle><circle class="dot d-insufficient" cx="236.00" cy="118.80" r="4.0"><title>corun_consistent_zero r1: e=0.784616 status=insufficient</title></circle><circle class="dot d-insufficient" cx="418.00" cy="120.06" r="4.0"><title>corun_consistent_zero r2: e=0.695002 status=insufficient</title></circle><circle class="dot d-insufficient" cx="600.00" cy="121.32" r="4.0"><title>corun_consistent_zero r3: e=0.615623 status=insufficient</title></circle><polyline class="series s-strong" points="54.00,92.21 236.00,68.14 418.00,44.07 600.00,20.00"/><circle class="dot d-insufficient" cx="54.00" cy="92.21" r="4.0"><title>corun_consistent_strong r0: e=10.1111 status=insufficient</title></circle><circle class="dot d-supported" cx="236.00" cy="68.14" r="4.0"><title>corun_consistent_strong r1: e=102.235 status=supported</title></circle><circle class="dot d-supported" cx="418.00" cy="44.07" r="4.0"><title>corun_consistent_strong r2: e=1033.71 status=supported</title></circle><circle class="dot d-supported" cx="600.00" cy="20.00" r="4.0"><title>corun_consistent_strong r3: e=10451.9 status=supported</title></circle><polyline class="series s-flipped" points="54.00,92.21 236.00,68.14 418.00,44.07 600.00,20.00"/><circle class="dot d-insufficient" cx="54.00" cy="92.21" r="4.0"><title>corun_flipped r0: e=10.1111 status=insufficient</title></circle><circle class="dot d-rejected" cx="236.00" cy="68.14" r="4.0"><title>corun_flipped r1: e=102.235 status=rejected</title></circle><circle class="dot d-rejected" cx="418.00" cy="44.07" r="4.0"><title>corun_flipped r2: e=1033.71 status=rejected</title></circle><circle class="dot d-rejected" cx="600.00" cy="20.00" r="4.0"><title>corun_flipped r3: e=10451.9 status=rejected</title></circle><polyline class="series s-stage3" points="54.00,92.21 236.00,68.14"/><circle class="dot d-insufficient" cx="54.00" cy="92.21" r="4.0"><title>llm_smoke_stage3 r0: e=10.1111 status=insufficient</title></circle><circle class="dot d-supported" cx="236.00" cy="68.14" r="4.0"><title>llm_smoke_stage3 r1: e=102.235 status=supported</title></circle></svg><figcaption>Per-round e-value (evidence_factor) on a log scale; dot colour encodes the round decision_status. Absent/near-zero evidence sits on the floor decade.</figcaption></figure><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 11,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 12,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 13,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 14,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 15,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 16,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 17,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 18,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    }
+  ],
+  &quot;section&quot;: &quot;evalue&quot;
+}
+=== end provenance ===</pre></section><section id="diffmatrix"><h2>Decision-chain divergence matrix</h2><p>All 10 unordered pairs, diffed node-by-node on the content-addressed decision-chain fingerprint (reused verbatim from the gate-12 verifier). Runs of differing round counts diverge by chain length; same-length conditions diverge at the first round whose claim_decision content differs — the sign-flipped effect at round 0.</p><div class="tablewrap"><table class="diff"><thead><tr class=""><th></th><th>corun_flat</th><th>corun_consistent_zero</th><th>corun_consistent_strong</th><th>corun_flipped</th><th>llm_smoke_stage3</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>corun_flat</code></td><td class="">—</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_zero</code></td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="">—</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_strong</code></td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="">—</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td></tr><tr class=""><td class="rowhead"><code>corun_flipped</code></td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (claim_decision)</td><td class="">—</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td></tr><tr class=""><td class="rowhead"><code>llm_smoke_stage3</code></td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td><td class="bad"><span class="pill bad">diverge</span> round 0 (prior_proposal)</td><td class="">—</td></tr></tbody></table></div></section><section id="perround"><h2>Per-run round-by-round record</h2><p class="note">Each round: agent proposal &rarr; Dry&rarr;Wet promotion gate &rarr; wet observation &rarr; evidence adjudication. An <code>insufficient</code> status is rendered as honestly undecided (evidence below the decisive threshold), never as a failure.</p><h3><code>corun_flat</code></h3><p>Terminal verdict: insufficient (honestly undecided — evidence below decisive threshold).</p><div class="tablewrap"><table class="perrun"><thead><tr class=""><th>Round</th><th>Proposed candidates</th><th>Promoted</th><th>Status</th><th>Effect</th><th>e-value</th><th>95% CS</th><th>Deny reason</th></tr></thead><tbody><tr class=""><td class="">0</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[4]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[5]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[1]</sup></td><td class="">+2.602085e-18<sup class="anc">[2]</sup></td><td class="">0<sup class="anc">[3]</sup></td><td class="">[-0.006117602, 0.006117602]</td><td class="">—</td></tr><tr class=""><td class="">1</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[9]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[10]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[6]</sup></td><td class="">+2.602085e-18<sup class="anc">[7]</sup></td><td class="">0<sup class="anc">[8]</sup></td><td class="">[-0.004403443, 0.004403443]</td><td class="">—</td></tr><tr class=""><td class="">2</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[14]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[15]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[11]</sup></td><td class="">+2.602085e-18<sup class="anc">[12]</sup></td><td class="">0<sup class="anc">[13]</sup></td><td class="">[-0.003631968, 0.003631968]</td><td class="">—</td></tr><tr class=""><td class="">3</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[19]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[20]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[16]</sup></td><td class="">+2.602085e-18<sup class="anc">[17]</sup></td><td class="">0<sup class="anc">[18]</sup></td><td class="">[-0.003167657, 0.003167657]</td><td class="">—</td></tr></tbody></table></div><h3><code>corun_consistent_zero</code></h3><p>Terminal verdict: insufficient (honestly undecided — evidence below decisive threshold).</p><div class="tablewrap"><table class="perrun"><thead><tr class=""><th>Round</th><th>Proposed candidates</th><th>Promoted</th><th>Status</th><th>Effect</th><th>e-value</th><th>95% CS</th><th>Deny reason</th></tr></thead><tbody><tr class=""><td class="">0</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[24]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[25]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[21]</sup></td><td class="">+0.00086575<sup class="anc">[22]</sup></td><td class="">0.885786<sup class="anc">[23]</sup></td><td class="">[-0.002654113, 0.004385613]</td><td class="">—</td></tr><tr class=""><td class="">1</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[29]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[30]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[26]</sup></td><td class="">+0.00086575<sup class="anc">[27]</sup></td><td class="">0.784616<sup class="anc">[28]</sup></td><td class="">[-0.001665303, 0.003396803]</td><td class="">—</td></tr><tr class=""><td class="">2</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[34]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[35]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[31]</sup></td><td class="">+0.00086575<sup class="anc">[32]</sup></td><td class="">0.695002<sup class="anc">[33]</sup></td><td class="">[-0.001220707, 0.002952207]</td><td class="">—</td></tr><tr class=""><td class="">3</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[39]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[40]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[36]</sup></td><td class="">+0.00086575<sup class="anc">[37]</sup></td><td class="">0.615623<sup class="anc">[38]</sup></td><td class="">[-0.0009532796, 0.00268478]</td><td class="">—</td></tr></tbody></table></div><h3><code>corun_consistent_strong</code></h3><p>Terminal verdict: supported (supported by decisive evidence).</p><div class="tablewrap"><table class="perrun"><thead><tr class=""><th>Round</th><th>Proposed candidates</th><th>Promoted</th><th>Status</th><th>Effect</th><th>e-value</th><th>95% CS</th><th>Deny reason</th></tr></thead><tbody><tr class=""><td class="">0</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[44]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[45]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[41]</sup></td><td class="">+0.3193285<sup class="anc">[42]</sup></td><td class="">10.1111<sup class="anc">[43]</sup></td><td class="">[0.3048045, 0.3338525]</td><td class="">—</td></tr><tr class=""><td class="">1</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[49]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[50]</sup></td><td class=""><span class="status-supported">supported</span><sup class="anc">[46]</sup></td><td class="">+0.3193285<sup class="anc">[47]</sup></td><td class="">102.235<sup class="anc">[48]</sup></td><td class="">[0.3088548, 0.3298022]</td><td class="">—</td></tr><tr class=""><td class="">2</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[54]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[55]</sup></td><td class=""><span class="status-supported">supported</span><sup class="anc">[51]</sup></td><td class="">+0.3193285<sup class="anc">[52]</sup></td><td class="">1033.71<sup class="anc">[53]</sup></td><td class="">[0.310681, 0.327976]</td><td class="">—</td></tr><tr class=""><td class="">3</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[59]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[60]</sup></td><td class=""><span class="status-supported">supported</span><sup class="anc">[56]</sup></td><td class="">+0.3193285<sup class="anc">[57]</sup></td><td class="">10451.9<sup class="anc">[58]</sup></td><td class="">[0.3117813, 0.3268757]</td><td class="">—</td></tr></tbody></table></div><h3><code>corun_flipped</code></h3><p>Terminal verdict: rejected (rejected by decisive evidence).</p><div class="tablewrap"><table class="perrun"><thead><tr class=""><th>Round</th><th>Proposed candidates</th><th>Promoted</th><th>Status</th><th>Effect</th><th>e-value</th><th>95% CS</th><th>Deny reason</th></tr></thead><tbody><tr class=""><td class="">0</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[64]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[65]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[61]</sup></td><td class="">-0.08592463<sup class="anc">[62]</sup></td><td class="">10.1111<sup class="anc">[63]</sup></td><td class="">[-0.09327335, -0.0785759]</td><td class="">—</td></tr><tr class=""><td class="">1</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[69]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[70]</sup></td><td class=""><span class="status-rejected">rejected</span><sup class="anc">[66]</sup></td><td class="">-0.08592463<sup class="anc">[67]</sup></td><td class="">102.235<sup class="anc">[68]</sup></td><td class="">[-0.09121614, -0.08063311]</td><td class="">—</td></tr><tr class=""><td class="">2</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[74]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[75]</sup></td><td class=""><span class="status-rejected">rejected</span><sup class="anc">[71]</sup></td><td class="">-0.08592463<sup class="anc">[72]</sup></td><td class="">1033.71<sup class="anc">[73]</sup></td><td class="">[-0.09028994, -0.08155931]</td><td class="">—</td></tr><tr class=""><td class="">3</td><td class="">ethanol, acetonitrile, acetone, hexane<sup class="anc">[79]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[80]</sup></td><td class=""><span class="status-rejected">rejected</span><sup class="anc">[76]</sup></td><td class="">-0.08592463<sup class="anc">[77]</sup></td><td class="">10451.9<sup class="anc">[78]</sup></td><td class="">[-0.0897324, -0.08211685]</td><td class="">—</td></tr></tbody></table></div><h3><code>llm_smoke_stage3</code></h3><p>Terminal verdict: supported (supported by decisive evidence).</p><div class="tablewrap"><table class="perrun"><thead><tr class=""><th>Round</th><th>Proposed candidates</th><th>Promoted</th><th>Status</th><th>Effect</th><th>e-value</th><th>95% CS</th><th>Deny reason</th></tr></thead><tbody><tr class=""><td class="">0</td><td class="">acetonitrile, ethanol, acetone, hexane<sup class="anc">[84]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[85]</sup></td><td class=""><span class="status-insufficient">insufficient</span><sup class="anc">[81]</sup></td><td class="">+0.3193285<sup class="anc">[82]</sup></td><td class="">10.1111<sup class="anc">[83]</sup></td><td class="">[0.3048045, 0.3338525]</td><td class="">—</td></tr><tr class=""><td class="">1</td><td class="">acetonitrile, ethanol, acetone, hexane<sup class="anc">[89]</sup></td><td class="">cand_ethanol, cand_acetonitrile<sup class="anc">[90]</sup></td><td class=""><span class="status-supported">supported</span><sup class="anc">[86]</sup></td><td class="">+0.3193285<sup class="anc">[87]</sup></td><td class="">102.235<sup class="anc">[88]</sup></td><td class="">[0.3088548, 0.3298022]</td><td class="">—</td></tr></tbody></table></div><pre class="anchor-block">=== provenance:anchors (machine-readable — do not edit) ===
+{
+  &quot;anchors&quot;: [
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 1,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 2,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 3,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 4,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 2
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 5,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 8
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 6,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 7,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 8,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 9,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 29
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 10,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 35
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 11,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 12,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 13,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 14,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 56
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 15,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 62
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 16,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 17,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 18,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 19,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 83
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 20,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flat&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 21,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 22,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 23,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 24,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 2
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 25,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 8
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 26,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 27,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 28,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 29,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 29
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 30,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 35
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 31,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 32,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 33,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 34,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 56
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 35,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 62
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 36,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 37,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 38,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 39,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 83
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 40,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_zero&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 41,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 42,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 43,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 44,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 2
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 45,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 8
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 46,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 47,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 48,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 49,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 29
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 50,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 35
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 51,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 52,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 53,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 54,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 56
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 55,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 62
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 56,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 57,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 58,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 59,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 83
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 60,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_consistent_strong&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 61,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 62,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 63,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 64,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 2
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 65,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 8
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 66,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 67,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 68,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 69,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 29
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 70,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 35
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 71,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 72,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 73,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 80
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 74,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 56
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 75,
+      &quot;round&quot;: 2,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 62
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 76,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 77,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 78,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 107
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 79,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 83
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 80,
+      &quot;round&quot;: 3,
+      &quot;run&quot;: &quot;corun_flipped&quot;,
+      &quot;seq&quot;: 89
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 81,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 82,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 83,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 26
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 84,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 2
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 85,
+      &quot;round&quot;: 0,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 8
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.decision_status&quot;,
+      &quot;id&quot;: 86,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.statistic.value&quot;,
+      &quot;id&quot;: 87,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;claim_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.power.evidence_factor&quot;,
+      &quot;id&quot;: 88,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 53
+    },
+    {
+      &quot;event_kind&quot;: &quot;decision&quot;,
+      &quot;field_path&quot;: &quot;payload.content.candidates&quot;,
+      &quot;id&quot;: 89,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 29
+    },
+    {
+      &quot;event_kind&quot;: &quot;promotion_decision&quot;,
+      &quot;field_path&quot;: &quot;payload.promoted&quot;,
+      &quot;id&quot;: 90,
+      &quot;round&quot;: 1,
+      &quot;run&quot;: &quot;llm_smoke_stage3&quot;,
+      &quot;seq&quot;: 35
+    }
+  ],
+  &quot;section&quot;: &quot;perround&quot;
+}
+=== end provenance ===</pre></section><section id="gate12"><h2>Gate-12 chain re-verification</h2><p>Gate-12 re-verification is delegated to <code>scripts/verify_run_chain.py</code> (lifecycle pairing, payload completeness, fingerprint threading, checkpoint reconciliation) — imported, never re-implemented. A run that fails verification is reported here as broken, not silently dropped.</p><div class="tablewrap"><table class="g12"><thead><tr class=""><th>Run</th><th>Gate-12 chain</th><th>Layer / code</th><th>Events</th><th>Message</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>corun_flat</code></td><td class=""><span class="pill ok">CHAIN COMPLETE</span></td><td class="">—</td><td class="">110</td><td class="">chain complete</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_zero</code></td><td class=""><span class="pill ok">CHAIN COMPLETE</span></td><td class="">—</td><td class="">110</td><td class="">chain complete</td></tr><tr class=""><td class="rowhead"><code>corun_consistent_strong</code></td><td class=""><span class="pill ok">CHAIN COMPLETE</span></td><td class="">—</td><td class="">110</td><td class="">chain complete</td></tr><tr class=""><td class="rowhead"><code>corun_flipped</code></td><td class=""><span class="pill ok">CHAIN COMPLETE</span></td><td class="">—</td><td class="">110</td><td class="">chain complete</td></tr><tr class=""><td class="rowhead"><code>llm_smoke_stage3</code></td><td class=""><span class="pill ok">CHAIN COMPLETE</span></td><td class="">—</td><td class="">56</td><td class="">chain complete</td></tr></tbody></table></div></section><section id="boundary"><h2>Scope, honest boundary, and limits</h2><div class="boundary"><h3>Scope, honest boundary, and limits</h3><p>Approved outward description of the system:</p><blockquote class="quote">A provenance-aware adaptive Dry–Wet–Agent scientific loop with real quantum-chemical dry computation, trusted simulated wet instrumentation, sequential evidence certification, append-only scientific knowledge evolution, and validated deterministic and LLM agent backends.</blockquote><p>Scope and limits — what this closing run does and does not claim:</p><ul><li><strong>Simulated wet instrumentation.</strong> The wet leg is a trusted plate-reader simulator, not a physical instrument. The dry leg is real quantum-chemical computation.</li><li><strong>Real-machine seam ready but not connected.</strong> The wet interface is built and typed for a real instrument, but no physical laboratory is wired in.</li><li><strong>LLM backend validated but default-off.</strong> The LLM agent backend is validated (Stage 3) and reaches the same scientific verdict as the deterministic template backend on the same substrate; the deterministic backend remains the default.</li><li><strong>Single machine, single campaign.</strong> These are single-machine, single-campaign runs; this is not a multi-campaign production deployment.</li></ul><p>Explicitly out of scope (claims this report does not make):</p><ul><li>This is <strong>not</strong> a physical autonomous laboratory.</li><li>This is <strong>not</strong> real wet-lab validation.</li><li>This is <strong>not</strong> a multi-campaign production system.</li><li>This is <strong>not</strong> a general autonomous scientist.</li></ul></div></section><section id="integrity"><h2>Integrity footer</h2><div class="tablewrap"><table class="integ"><thead><tr class=""><th>Run</th><th>events.jsonl high-water sha256</th><th>Complete events</th><th>Gate-12</th></tr></thead><tbody><tr class=""><td class="rowhead"><code>corun_flat</code></td><td class=""><code>5d7923ae3ae6eea439aeb23a68f6221949abb0e9ef7fb8b73ccae006d1f505c9</code></td><td class="">110</td><td class=""><span class="pill ok">complete</span></td></tr><tr class=""><td class="rowhead"><code>corun_consistent_zero</code></td><td class=""><code>2a4c2a529def878b5b4d4340e5ffc4d9aac2c3cb28a66b4d45740a0b7fd0a08b</code></td><td class="">110</td><td class=""><span class="pill ok">complete</span></td></tr><tr class=""><td class="rowhead"><code>corun_consistent_strong</code></td><td class=""><code>4fcc10f451e5b93e6ca90c07e9e6056ffc435748c56de843bb7f371043d18f3a</code></td><td class="">110</td><td class=""><span class="pill ok">complete</span></td></tr><tr class=""><td class="rowhead"><code>corun_flipped</code></td><td class=""><code>9124ced8df3a95161a061112f51553ba2a7397b72a46249d6474efe805002d5a</code></td><td class="">110</td><td class=""><span class="pill ok">complete</span></td></tr><tr class=""><td class="rowhead"><code>llm_smoke_stage3</code></td><td class=""><code>26ad7cfc26f4a5238921d8c8e3a036e94a2d8c22350f954b1dfc8a84743c9b43</code></td><td class="">56</td><td class=""><span class="pill ok">complete</span></td></tr></tbody></table></div><ul><li>Runs: <code>corun_flat</code>, <code>corun_consistent_zero</code>, <code>corun_consistent_strong</code>, <code>corun_flipped</code>, <code>llm_smoke_stage3</code></li><li>Verifier lineage: <code>scripts/verify_run_chain.py</code> (gate-12 three-layer chain audit, reused for fingerprint / chain / diff logic).</li><li>Staleness / integrity: each run pinned by its <code>events.jsonl</code> high-water content sha256 (never mtime). Re-run this generator against the same directories to reproduce this report byte-for-byte.</li></ul><div class="footer-digest"><div class="kv"><span class="k">report_digest</span><span class="v"><code>23e0752d17d655590646f16618879dac3367cbebb63f1d4e2220039a974eecbc</code></span></div><p class="note">report_digest = sha256 over the pinned per-run high-water shas (sorted by run name). Any tampered input byte changes a high-water sha and this digest, and flips the corresponding gate-12 status to broken.</p></div></section></main></body></html>

@@ -1,0 +1,177 @@
+{
+  "_WARNING": "机器生成，请勿手改。修改 claims/claims.yaml 或 claims/deviations.yaml 后重新运行 `python3 scripts/claim_compiler.py` 重编译。手改会被 `--check` 侦测为账本漂移并非零退出。",
+  "claims": [
+    {
+      "claim_id": "contamination_protection.S0demo.os_vs_naive",
+      "claim_kind": "superiority",
+      "compiled_at": "2026-07-12T12:39:41.607342+00:00",
+      "compiler_fingerprint": "sha256:c9c0d1a2c2cfb197d931088db24a1a81957b1d4b13cb334504ee284af344bb7a",
+      "decision_fn": "paired_significance_verdict",
+      "deviations": [],
+      "domain": "contamination",
+      "evidence": {
+        "campaign": null,
+        "cells_sha256": "68e51ea7cb5c1505e7cd5b7ab934d4db5e7d845f2a74e5443b68a1441a32a270",
+        "effect": -0.14235988907379798,
+        "exists": true,
+        "mtime_utc": "2026-07-11T12:37:25.797459+00:00",
+        "p_value": 1.9073486328125e-06,
+        "sha256": "sha256:2638b3a8332d5fa841e0a82eab9b1736cc16ea1f9cd51c3479be1d2d35d67f05",
+        "source_file": "runs/full_sweep/report/headline_stats.json"
+      },
+      "generation": "gen-1",
+      "reason": "p=1.90735e-06<=α=0.05 且方向有利（effect=-0.14236）",
+      "stale_reasons": [],
+      "status": "supported",
+      "test_spec": {
+        "alpha": 0.05,
+        "favorable_direction": "negative"
+      },
+      "text": "os 训练集污染率显著低于 naive（S0.demo 演示域，配对精确置换检验）"
+    },
+    {
+      "claim_id": "false_optimum_rejection.S0demo.os_vs_naive",
+      "claim_kind": "superiority",
+      "compiled_at": "2026-07-12T12:39:41.607342+00:00",
+      "compiler_fingerprint": "sha256:c9c0d1a2c2cfb197d931088db24a1a81957b1d4b13cb334504ee284af344bb7a",
+      "decision_fn": "paired_significance_verdict",
+      "deviations": [],
+      "domain": "wrong_optimum",
+      "evidence": {
+        "campaign": null,
+        "cells_sha256": "68e51ea7cb5c1505e7cd5b7ab934d4db5e7d845f2a74e5443b68a1441a32a270",
+        "effect": -0.8,
+        "exists": true,
+        "mtime_utc": "2026-07-11T12:37:25.797459+00:00",
+        "p_value": 3.0517578125e-05,
+        "sha256": "sha256:2638b3a8332d5fa841e0a82eab9b1736cc16ea1f9cd51c3479be1d2d35d67f05",
+        "source_file": "runs/full_sweep/report/headline_stats.json"
+      },
+      "generation": "gen-1",
+      "reason": "p=3.05176e-05<=α=0.05 且方向有利（effect=-0.8）",
+      "stale_reasons": [],
+      "status": "supported",
+      "test_spec": {
+        "alpha": 0.05,
+        "favorable_direction": "negative"
+      },
+      "text": "os 命中错误最优（wrong_optimum）率显著低于 naive（S0.demo 演示域，配对精确置换检验）"
+    },
+    {
+      "claim_id": "h1_structural_regret.S2r3pool.os_vs_robust",
+      "claim_kind": "superiority",
+      "compiled_at": "2026-07-12T12:39:41.607342+00:00",
+      "compiler_fingerprint": "sha256:c9c0d1a2c2cfb197d931088db24a1a81957b1d4b13cb334504ee284af344bb7a",
+      "decision_fn": "paired_significance_verdict",
+      "deviations": [
+        {
+          "checkpoints_ref": "CHECKPOINTS R1 复盘 · H1 判定（os vs robust 结构档）",
+          "class": "prereg_rejected",
+          "deviation_id": "H1_REJECTED_os_worse",
+          "pending_reaggregation": false,
+          "recorded_in": [
+            "README.md",
+            "PAPER_OUTLINE.md",
+            "runs/r1_resweep/report/aggregate_summary.json",
+            "mailbox/red_to_blue/003_agg3-h1-sensitivity.md"
+          ],
+          "status": "closed",
+          "summary": "H1 预注册 os 的 regret 在结构档显著优于 robust-blind；Gen-2（r1_resweep）S2r3 中高档池化实测 mean_diff(os−robust)=+0.01606、p=1e-4（正=os 更差），方向与预注册 相反 → 拒绝主假设，落 literal_verdict=H1_REJECTED_os_worse。剔 batch 后拒绝更强 （edge_only +0.023, p=1e-4），故拒绝不依赖 P0 batch 病。"
+        }
+      ],
+      "domain": "h1_regret",
+      "evidence": {
+        "campaign": {
+          "campaign_id": "r1_resweep",
+          "cells_sha256": "cef926f8ce45c4fb898b006f465250100edc92260f27ed68f5d5e68cd03533f6",
+          "manifest_path": "runs/r1_resweep/campaign_manifest.json",
+          "manifest_sha256_ref": "expos_backup_20260710/MANIFEST.sha256",
+          "n_cells": 2700
+        },
+        "cells_sha256": null,
+        "effect": 0.015440032904090519,
+        "exists": true,
+        "mtime_utc": "2026-07-11T14:10:34.700483+00:00",
+        "p_value": 0.0001,
+        "sha256": "sha256:f98cf22ecf3f27ba3011e8f9299c897f12c08580006d770a97eb8a0f9bffd5d1",
+        "source_file": "runs/r1_resweep/report/aggregate_summary.json"
+      },
+      "generation": "gen-2",
+      "reason": "p=0.0001<=α=0.05 但方向不利（effect=0.01544）→ 预注册被证否",
+      "stale_reasons": [],
+      "status": "rejected",
+      "test_spec": {
+        "alpha": 0.05,
+        "favorable_direction": "negative"
+      },
+      "text": "H1 预注册：结构档（S2r3 中高档池化）os 的 final_regret 显著优于 robust-blind"
+    },
+    {
+      "claim_id": "batch_detection_attribution.gen3.os",
+      "claim_kind": "superiority",
+      "compiled_at": "2026-07-12T12:39:41.607342+00:00",
+      "compiler_fingerprint": "sha256:c9c0d1a2c2cfb197d931088db24a1a81957b1d4b13cb334504ee284af344bb7a",
+      "decision_fn": "paired_significance_verdict",
+      "deviations": [
+        {
+          "checkpoints_ref": "CHECKPOINTS P0 · batch 方向修复批（checks.py 修法② + 归因镜像守卫）；Gen-3 冻结记录",
+          "class": "data_diseased",
+          "deviation_id": "batch_direction_diseased",
+          "pending_reaggregation": false,
+          "recorded_in": [
+            "mailbox/red_to_blue/003_agg3-h1-sensitivity.md",
+            "mailbox/red_to_blue/004_att3-attribution-findings.md",
+            "mailbox/blue_to_red/016_sweeps-complete-b3-ready.md",
+            "runs/r1_resweep/report/m12_batch_direction_summary.json",
+            "runs/r1_resweep/report/gen3_manifest.json"
+          ],
+          "status": "closed",
+          "summary": "Gen-1/2 batch_effect 方向正确率全档 0.000（判反，归因 100% 误标干净批）。P0 修复 （checks.py 修法② 双锚选批 + attribution.py sign(t_batch)==sign(shift_hat) 交叉守卫） 落地后重跑 600 批次格；Gen-3 重聚合（runs/r1_resweep/report/m12_batch_direction_summary.json） 实测**全 Gen-3 批次格 inverted=0、correct=1069、方向正确率=1.000**，红队 probe_direction.py 在重跑后数据上独立复核 inverted=0（direction_results 旧档 17:49 早于 20:10 重跑，已作废）。 full_sweep 旧档未重跑仍带病（inverted=117），作诚实对照保留。偏差就此闭合、不再 stale。"
+        }
+      ],
+      "domain": "batch_attribution",
+      "evidence": {
+        "campaign": {
+          "campaign_id": "r1_resweep",
+          "cells_sha256": "cef926f8ce45c4fb898b006f465250100edc92260f27ed68f5d5e68cd03533f6",
+          "manifest_path": "runs/r1_resweep/campaign_manifest.json",
+          "manifest_sha256_ref": "expos_backup_20260710/MANIFEST.sha256",
+          "n_cells": 2700
+        },
+        "cells_sha256": null,
+        "effect": 2.675,
+        "exists": true,
+        "mtime_utc": "2026-07-12T09:40:40.828786+00:00",
+        "p_value": 0.0001,
+        "sha256": "sha256:578888e3905bf2d3e17079fce4ff0963188c3583a3f5908093999f021005f75d",
+        "source_file": "runs/r1_resweep/report/m12_batch_direction_summary.json"
+      },
+      "generation": "gen-3",
+      "reason": "p=0.0001<=α=0.05 且方向有利（effect=2.675）",
+      "stale_reasons": [],
+      "status": "supported",
+      "test_spec": {
+        "alpha": 0.05,
+        "favorable_direction": "positive"
+      },
+      "text": "batch shift 检出/归因链方向正确（Gen-3：全批次格 inverted=0，逐格 correct−inverted 配对置换显著）"
+    }
+  ],
+  "compiled_at": "2026-07-12T12:39:41.607342+00:00",
+  "compiler_fingerprint": "sha256:c9c0d1a2c2cfb197d931088db24a1a81957b1d4b13cb334504ee284af344bb7a",
+  "inputs": {
+    "claims_yaml": {
+      "path": "claims/claims.yaml",
+      "sha256": "sha256:99d19216fbbaad64920ac1cca2ca8d436028f54900e71778fbd46ceba1cba482"
+    },
+    "deviations_yaml": {
+      "path": "claims/deviations.yaml",
+      "sha256": "sha256:15e625dd41d6547480117878889cffc023e58debc8b7139c1fc55550deee84bd"
+    }
+  },
+  "ledger_version": 1,
+  "status_counts": {
+    "rejected": 1,
+    "supported": 3
+  }
+}

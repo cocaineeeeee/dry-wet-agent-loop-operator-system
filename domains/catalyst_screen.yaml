@@ -1,0 +1,147 @@
+# M20 second-domain existence proof: catalyst screening (dry PySCF leg + wet
+# plate-reader leg). Structural twin of solvent_screen.yaml -- SAME kernel/planner/
+# qc/scheduler drive it, only this file + the adapters' domain tables change. That
+# is the "swappable scientific runtime" claim, made concrete (INDEX_M19_DOMAIN2
+# candidate 1).
+#
+# DUAL-LEG (M16 §1 / G4): one design space, two independent execution legs:
+#   * dry leg  (adapter: pyscf_dry)  -> metric `reactivity_proxy` (ligand-fragment
+#     dipole, Debye). A first-principles estimate with REAL method error and a
+#     deliberately biased proxy for catalytic performance; no artefact injected.
+#     Ligand geometries: adapters/dry/catalysts.py (CATALYSTS). The dry leg reads
+#     each candidate's explicit `geometry` param (from catalysts.catalyst_params),
+#     so PySCFDryAdapter is UNCHANGED from the solvent domain.
+#   * wet leg  (WetDriver + sim_reader) -> metric `catalyst_yield` (a.u.). The hidden
+#     truth surface (sim_reader.TruthSurface, profile `catalyst_high`) is a 1D
+#     Gaussian in the realised normalized ligand COORDINATE; artefacts (calibration
+#     drift, dropout) are injected server-side in the reader, not via expos injectors.
+#
+# `adapter` names the dry screening leg (same as solvent_screen); the wet leg is
+# driven out-of-band by expos.adapters.wet via `--loop mcl` (build_adapter is never
+# called for pyscf_dry). load_domain() accepts this file today.
+name: catalyst_screen
+adapter: pyscf_dry
+
+# M21 domain provider (mailbox 120): the `<module>:<Class>` locator for this domain's
+# DomainProvider. load_domain imports it, runs its birth-time governance and its
+# validate_yaml (the `catalyst` choices must equal the provider's CATALYSTS levels),
+# and folds its source-hash fingerprint into config_fingerprint. Consolidation-by-
+# reference: the provider returns the same leaf tables (CATALYSTS/CATALYST_DESCRIPTORS/
+# TRUTH_PROFILES) the legacy path uses, so declaring it changes no run behaviour.
+provider: expos.adapters.providers.catalyst_screen:CatalystScreenProvider
+
+objective:
+  name: catalyst_yield
+  metric: catalyst_yield
+  direction: maximize
+  description: >-
+    Wet plate-reader response (coupling yield proxy, a.u.) to a prepared catalyst
+    ligand. Hidden truth is a unimodal Gaussian in the realised normalized ligand
+    coordinate (reader profile `catalyst_high`, optimum toward the high-coordinate
+    end); the response surface lives only in the reader simulator. The dry leg
+    reports a separate `reactivity_proxy` channel (ligand dipole) used for
+    Dry->Wet promotion, not as this objective directly.
+
+design_space:
+  name: catalyst_screen
+  variables:
+    # Load-bearing screening dim: drives BOTH legs and the hidden truth. The dry
+    # leg computes each ligand's dipole (reactivity proxy); the wet leg realises
+    # its public normalized coordinate by mixing two bracketing stocks (public
+    # design knowledge, NOT truth). Coordinate table: adapters/dry/catalysts.py
+    # CATALYST_DESCRIPTORS.
+    #
+    # WIRING (session B, M20 landed): VariableDef now carries the optional
+    # per-variable `descriptors` field (INDEX_M19_DOMAIN2 §5). The mcl wet-leg build
+    # reads it and calls
+    #   compile_wet(exp, n_replicates=cfg.replicates, interleave=True,
+    #               descriptors=cfg.design_space.var("catalyst").descriptors,
+    #               screen_param="catalyst")
+    # and run_wet_leg(..., wet_metric=cfg.objective.metric). The values below are
+    # transcribed verbatim from CATALYST_DESCRIPTORS (source of truth).
+    - name: catalyst
+      kind: categorical
+      choices: [pf3, pme3, ph3, pcl3, nh3]
+      descriptors:
+        pf3:  {coord: 0.05}
+        pme3: {coord: 0.30}
+        ph3:  {coord: 0.50}
+        pcl3: {coord: 0.75}
+        nh3:  {coord: 1.00}
+    # Recorded protocol conditions: actuated/validated on the wet protocol and
+    # carried through custody, but FLAT in the truth surface (coordinate-only),
+    # exactly as the solvent domain's continuous conditions. W6+ may grow the
+    # truth surface to consume them.
+    - {name: residence_time, kind: continuous, low: 1.0, high: 30.0, unit: "min"}
+    - {name: temperature, kind: continuous, low: 25.0, high: 100.0, unit: "C"}
+    - {name: catalyst_loading, kind: continuous, low: 0.5, high: 5.0, unit: "mol%"}
+
+restrictions: []
+
+# 96-well plate matches the wet plate-reader labware (corning_96_wellplate_360ul_flat).
+plate: {rows: 8, cols: 12}
+# `replicates` is the wet MULTI-REPLICATE substrate count (M17 K-F): >=~6 pairs/round
+# are needed for a decisive sign-flip certification (letters 083a/093 quantitative
+# lower bound). Kept at 8 (same as solvent_screen) -- power is bought ONLY on the
+# measurement side; do not lower for well-count savings.
+replicates: 8
+
+sentinel:
+  n: 2
+  # High-coordinate ligand near the `catalyst_high` truth optimum; the exact band
+  # is reader-cross-checked once the full mcl loop runs this domain (mirrors the
+  # solvent sentinel's e2e band check).
+  params: {catalyst: nh3, residence_time: 10.0, temperature: 60.0, catalyst_loading: 2.0}
+  expected_band: [0.6, 1.05]
+
+metric_range: [0.0, 1.2]   # wet `catalyst_yield` range (a.u.)
+
+# No expos artifact injectors: wet artefacts (calibration_drift, dropout) are
+# injected server-side in sim_reader; dry observations carry only genuine method
+# error. Intentionally empty (honest boundary).
+simulator: {}
+
+# G5: two rounds must run through cleanly on a small budget.
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+# ---- M20 domain-contract v2 (additive-optional; see expos/domain.py). Declares
+# this domain's REAL current state; EXP013 (preview) reconciles it against the live
+# registries. Structural twin of solvent_screen's block (same swappable contract).
+
+# Controlled metric vocabulary: objective.metric + both legs' labels.
+metrics: [catalyst_yield, reactivity_proxy]
+# M23 Phase 0 (letter 121): per-metric units from UNIT_VOCABULARY; strict equality,
+# no kernel conversion.
+metric_units:
+  catalyst_yield: arbitrary_unit
+  reactivity_proxy: debye
+
+# Dispatch kind: same async dual-leg dry compute leg as solvent_screen.
+execution_kind: dry_compute
+
+observables:
+  - name: wet_yield
+    metric: catalyst_yield
+    description: >-
+      Wet plate-reader coupling-yield proxy (a.u.); hidden truth is a unimodal
+      Gaussian in the realised normalized ligand coordinate (reader simulator only).
+  - name: dry_reactivity
+    metric: reactivity_proxy
+    description: >-
+      Dry PySCF ligand-fragment dipole (Debye), carrying real method error; a
+      deliberately biased proxy used for Dry->Wet promotion, not the objective.
+    note: >-
+      TODO(M20): dry metric label not yet a first-class objective metric (same debt
+      as solvent_screen's dry_polarity) -- recorded so it stays machine-visible.
+
+# Acceptance-face debt ledger. catalyst_high is LANDED (real positive-sign face
+# test); catalyst_low is the RECORDED DEBT -- the flipped discriminator face is
+# COMMITTED TO but its K-D discriminative test is not yet written (status: declared,
+# test_anchor: null). This is exactly the flipped-face TODO letter 110 deferred,
+# now a machine-checked ledger entry EXP013 will not let a third domain forget.
+acceptance_faces:
+  - {face_name: catalyst_high, truth_profile: catalyst_high, status: landed,
+     test_anchor: "tests/test_m20_catalyst_domain.py::test_b_catalyst_high_face_positive_sign_and_only_mu_differs"}
+  - {face_name: catalyst_low, truth_profile: catalyst_low, status: landed,
+     test_anchor: "tests/test_m20_catalyst_domain.py::test_b2_catalyst_low_face_flips_sign_only_mu_differs"}

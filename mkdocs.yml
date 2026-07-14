@@ -1,0 +1,57 @@
+site_name: expos——实验测量的可信操作系统
+site_description: 面向安全、非生物、物理材料实验的闭环实验操作层（experiment OS）
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+
+docs_dir: docs
+
+nav:
+  - 入门:
+      - 文档站首页: index.md
+  - 架构:
+      - 权威蓝图 ARCHITECTURE: ARCHITECTURE.md
+      - 控制器模型 CONTROLLER_MODEL: CONTROLLER_MODEL.md
+      - 软信任提案 SOFT_TRUST_PROPOSAL: SOFT_TRUST_PROPOSAL.md
+      - 平台愿景 PLATFORM_VISION: PLATFORM_VISION.md
+      - 有效性审视 DEEP_REVIEW: DEEP_REVIEW.md
+  - 里程碑:
+      - 构建计划 BUILD_PLAN: BUILD_PLAN.md
+      - M5 QC 三级检查: M5_DESIGN.md
+      - M6 归因引擎与失败模型: M6_DESIGN.md
+      - M9 对比实验协议: M9_PROTOCOL.md
+  - 呈现与论文:
+      - M10 三幕 Demo 剧本: DEMO_SCRIPT.md
+      - 论文骨架 PAPER_OUTLINE: PAPER_OUTLINE.md
+      - 理论主定理 P3（聚合盲）: THEORY_P3.md
+  - 工程:
+      - CLI 设计: CLI_DESIGN.md
+      - 工程纪律: ENGINEERING.md
+      - 插件 API 草案: PLUGIN_API_DRAFT.md
+      - 事件词表规范: EVENT_SCHEMA.md
+      - 长任务动作语义草案: ADAPTER_ACTIONS.md
+      - Run 清单规范: RUN_MANIFEST_SPEC.md
+      - 主张账本 CLAIM_LEDGER: CLAIM_LEDGER.md
+      - Run 目录索引设计: RUNS_INDEX_DESIGN.md
+      - 能力模型: CAPABILITY_MODEL.md
+  - 健壮性审查:
+      - R3 输入包（红队入口）: R3_INPUTS.md
+  - 调研库:
+      - 外部系统调研 REFERENCE_MAP: REFERENCE_MAP.md
+
+markdown_extensions:
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+
+exclude_docs: |
+  references/
+  runs/

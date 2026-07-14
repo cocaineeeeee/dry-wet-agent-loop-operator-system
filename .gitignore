@@ -1,0 +1,32 @@
+# --- Python bytecode / build ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Test / type / lint caches ---
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+
+# --- OS / editor cruft ---
+.DS_Store
+.ipynb_checkpoints/
+
+# --- Local tooling / IDE config (may contain local paths & settings) ---
+.claude/
+scratchpad/
+
+# --- Large local artifacts (kept local; NOT uploaded) ---
+# runs/       : ~18G of run outputs
+# references/ : ~4.6G third-party clones
+# site/       : mkdocs-generated static site
+runs/
+references/
+site/

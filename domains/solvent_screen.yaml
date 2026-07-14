@@ -1,0 +1,148 @@
+# M16 minimum-loop domain: solvent screening (dry PySCF leg + wet plate-reader leg).
+#
+# This domain is DUAL-LEG (M16 §1 / G4): one design space is measured by two
+# independent execution legs that report on two channels/metrics.
+#   * dry leg  (adapter: pyscf_dry)  -> metric `polarity_proxy` (dipole, Debye).
+#     A first-principles estimate carrying REAL method error (basis/geometry/
+#     functional); no artefact is injected -- an ab-initio number is honestly
+#     biased vs the hidden truth (see docs note in adapters/wet/screen.py).
+#   * wet leg  (WetDriver + sim_reader) -> metric `solvent_response` (a.u.).
+#     The hidden truth surface (sim_reader.TruthSurface) is unimodal in solvent
+#     POLARITY; artefacts (calibration drift, dropout) are injected server-side
+#     inside the reader, NOT via the expos artifact-injector framework.
+#
+# The DomainConfig schema carries a single `adapter` field, so `adapter` names the
+# dry screening leg (the ExecutionAdapter-shaped entry of G4). The wet leg is
+# driven out-of-band by expos.adapters.wet (socket device, not a synchronous
+# execute()). Registering BOTH legs + a dual-leg config seam is a kernel change
+# owned by session B -- see /tmp/claude-1128/dimw5_handoff.md for the exact
+# ADAPTER_REGISTRY diff. Until B lands it, load_domain() rejects this file with
+# "unknown adapter: 'pyscf_dry'" -- that rejection is the ONLY thing blocking
+# load (design_space/objective/budget/sentinel are already structurally valid,
+# proven in tests/test_w8_domain_e2e.py::test_domain_yaml_structural).
+name: solvent_screen
+adapter: pyscf_dry
+
+# M21 domain provider (mailbox 120): the explicit `<module>:<Class>` locator for this
+# domain's DomainProvider. load_domain imports it, runs its birth-time governance
+# (check_complete: wet_coords levels == dry_species keys, non-empty truth faces, null
+# faces are declared, seed claims well-formed) and its validate_yaml (the `solvent`
+# choices must equal the provider's SOLVENTS levels), all LOUD at load. The provider's
+# source-hash fingerprint folds into config_fingerprint so a domain-implementation
+# drift trips resume drift-rejection. Consolidation-by-reference: the provider returns
+# the same leaf tables (SOLVENTS/SOLVENT_POLARITY/TRUTH_PROFILES) the legacy path uses,
+# so declaring it changes no run behaviour -- only the config fingerprint.
+provider: expos.adapters.providers.solvent_screen:SolventScreenProvider
+
+objective:
+  name: solvent_response
+  metric: solvent_response
+  direction: maximize
+  description: >-
+    Wet plate-reader response to a prepared solvent (a.u.). Hidden truth is a
+    unimodal Gaussian in solvent polarity (optimum at intermediate polarity);
+    the response surface lives only in the reader simulator. The dry leg reports
+    a separate `polarity_proxy` channel (dipole) used for Dry->Wet promotion
+    (W7), not as this objective directly.
+
+design_space:
+  name: solvent_screen
+  variables:
+    # Load-bearing screening dim: drives BOTH legs and the hidden truth. The dry
+    # leg computes its dipole (polarity proxy); the wet leg realises its known
+    # polarity by mixing two bracketing stocks (public design knowledge, not
+    # truth). Polarity table: adapters/wet/screen.SOLVENT_POLARITY.
+    - {name: solvent, kind: categorical,
+       choices: [water, methanol, ethanol, acetonitrile, dmso, acetone, toluene, hexane]}
+    # Recorded protocol conditions: actuated/validated on the wet protocol and
+    # carried through custody, but FLAT in the M16 truth surface (polarity-only).
+    # Deliberate minimal-loop scope (M16 §3: zero scientific-novelty requirement);
+    # W6+ may grow the truth surface to consume them.
+    - {name: concentration, kind: continuous, low: 0.5, high: 20.0, transform: log, unit: "mM"}
+    - {name: temperature, kind: continuous, low: 15.0, high: 45.0, unit: "C"}
+    - {name: incubation_time, kind: continuous, low: 5.0, high: 120.0, unit: "min"}
+
+restrictions: []
+
+# 96-well plate matches the wet plate-reader labware (corning_96_wellplate_360ul_flat).
+plate: {rows: 8, cols: 12}
+# `replicates` is the wet MULTI-REPLICATE substrate count (M17 K-F, letters
+# 075/085): the single-well wet leg cannot reach a decisive certification verdict
+# (n_pairs=1 -> e-product frozen at 1.0; corr(capture,arm)=+-1 trips the plate-order
+# guard). The cure is >=3 replicate wells per candidate in a BALANCED plate order.
+# Wiring归 B: run_mcl_loop feeds this value to
+# `compile_wet(exp, n_replicates=cfg.replicates, interleave=True)` (see
+# adapters/wet/screen.py) -- the mcl wet-leg build owns that call. `interleave` has
+# NO schema field: it rides the call side as a kwarg, the same call-side convention
+# as `truth_profile` (a reader/plate-order knob, not a domain fact).
+# replicates=8: with promotion top_k=2 each arm holds ONE candidate, so
+# n_pairs == replicates; 3 pairs/round caps the sign-flip e at ~1.0 (letters
+# 083a/093 -- quantitative lower bound: decisive needs >=~6 pairs/round, and
+# 8 pairs gave e_product ~= 102 in the K-E acceptance runs). Do NOT lower this
+# back for well-count savings; power is bought ONLY on the measurement side
+# (letter 093 ruling (a)).
+replicates: 8
+
+sentinel:
+  n: 2
+  params: {solvent: acetonitrile, concentration: 5.0, temperature: 25.0, incubation_time: 30.0}
+  # Response band for a mid-polarity sentinel (near the truth optimum); the exact
+  # band is re-checked against the reader at load in the e2e test.
+  expected_band: [0.4, 1.15]
+
+metric_range: [0.0, 1.2]   # wet `solvent_response` range (a.u.)
+
+# No expos artifact injectors here: wet artefacts (calibration_drift, dropout)
+# are injected server-side in sim_reader; dry observations carry only genuine
+# method error. This block is intentionally empty (honest boundary).
+simulator: {}
+
+# G5: two rounds must run through cleanly on a small budget.
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+# ---- M20 domain-contract v2 (additive-optional; see expos/domain.py). These
+# blocks declare this domain's REAL current state; EXP013 (preview) reconciles them
+# against the live registries (load / bindings / truth_profiles / test anchors).
+
+# Controlled metric vocabulary (ASE all_properties precedent): objective.metric and
+# every observable's metric must be members. Both legs' labels are declared here.
+metrics: [solvent_response, polarity_proxy]
+# M23 Phase 0 (letter 121): per-metric units from UNIT_VOCABULARY; strict equality,
+# no kernel conversion (Celsius offset trap T3 -- units are metadata, never factors).
+metric_units:
+  solvent_response: arbitrary_unit
+  polarity_proxy: debye
+
+# Dispatch kind: `adapter: pyscf_dry` is the async job-shaped dry compute leg,
+# driven by `--loop mcl` (build_adapter is never called for it -- the async guard).
+execution_kind: dry_compute
+
+# Observation channels this domain emits (name / metric / description [/ note]).
+observables:
+  - name: wet_response
+    metric: solvent_response
+    description: >-
+      Wet plate-reader response to a prepared solvent (a.u.); hidden truth is a
+      unimodal Gaussian in solvent polarity, realised only in the reader simulator.
+  - name: dry_polarity
+    metric: polarity_proxy
+    description: >-
+      Dry PySCF dipole estimate (Debye), carrying real method error; used for
+      Dry->Wet promotion (W7), not as the objective directly.
+    note: >-
+      TODO(M20): the dry metric label rides the wet observation's secondary channel
+      and is not yet a first-class objective metric -- recorded here so the debt is
+      machine-visible rather than a forgotten comment.
+
+# Acceptance-face debt ledger (galaxy <tests> precedent). All three faces are
+# LANDED with real discriminative test anchors: polar_high (the seeded/agreeing
+# face), nonpolar_high (the K1 flipped discriminator), flat (the null no-signal
+# face). EXP013 clause 4 verifies each landed anchor actually exists.
+acceptance_faces:
+  - {face_name: polar_high, truth_profile: polar_high, status: landed,
+     test_anchor: "tests/test_k_flipped_domain.py::test_k1b_default_serve_is_bit_identical_to_polar_high"}
+  - {face_name: nonpolar_high, truth_profile: nonpolar_high, status: landed,
+     test_anchor: "tests/test_k_flipped_domain.py::test_k1a_flipped_face_ranks_nonpolar_highest"}
+  - {face_name: flat, truth_profile: flat, status: landed,
+     test_anchor: "tests/test_k_flipped_domain.py::test_k1b_flat_null_profile_is_polarity_independent_and_leaves_signals_intact"}

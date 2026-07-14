@@ -1,0 +1,100 @@
+# M17 K1 DISCRIMINATOR DOMAIN: truth surface contradicts the seeded ledger claim.
+#
+# This domain is structurally IDENTICAL to solvent_screen.yaml (same design space,
+# budget, thresholds, sentinel band, dual-leg wet objective). The ONE thing that
+# differs is NOT expressible in the DomainConfig schema: the hidden wet truth face.
+#
+#   * solvent_screen.yaml  -> reader truth_profile = "polar_high"   (peak mu=0.55):
+#     mid/high-polarity solvents respond higher; AGREES with the seeded ledger
+#     claim "polar-higher supported".
+#   * THIS domain           -> reader truth_profile = "nonpolar_high" (peak mu=0.20):
+#     response DECREASES monotonically across the measurable target-polarity window
+#     (~0.30..0.75), so LOW-polarity solvents (hexane/toluene) respond HIGHEST.
+#     The wet data therefore CONTRADICTS the seeded "polar-higher" claim -- with
+#     zero external injection, round-1 TRUSTED wet evidence must (once the M17
+#     Evidence-to-Claim Compiler lands) auto-produce a rejected/contrary decision.
+#
+# WHERE truth_profile LIVES (handoff to B's K-C mcl wiring):
+#   The truth surface is a *reader process* parameter, not a *domain* parameter, and
+#   DomainConfig has extra="forbid" -- so it CANNOT be a key in this file. The
+#   convention (see /tmp/claude-1128/dimkd_handoff.md) is:
+#     reader truth_profile for this domain = "nonpolar_high"
+#   passed on the CALL side to sim_reader.serve(..., truth_profile=...):
+#     * K-E tests: sim_reader.serve(host, port, seed, noise_sd=0.0,
+#                                   truth_profile="nonpolar_high")
+#     * K-C mcl wiring: run_mcl_loop() must select truth_profile by domain name
+#       (or a new keyword) so this file drives the nonpolar_high reader. Until K-C
+#       lands, mcl still starts a polar_high reader for EVERY domain -- so this file
+#       is exercised via the reader-side param in tests/test_k_flipped_domain.py,
+#       not yet via run_mcl_loop.
+#
+# Everything below mirrors solvent_screen.yaml verbatim (same schema, same adapter),
+# so load_domain() accepts/rejects it identically -- the two domains differ ONLY in
+# the out-of-band reader face, which is the whole point of the discriminator.
+name: solvent_screen_flipped
+adapter: pyscf_dry
+
+objective:
+  name: solvent_response
+  metric: solvent_response
+  direction: maximize
+  description: >-
+    Wet plate-reader response to a prepared solvent (a.u.). K1 discriminator face:
+    the hidden truth is a unimodal Gaussian peaking at LOW solvent polarity
+    (nonpolar-higher), so the wet data contradicts the seeded polar-higher claim.
+    The response surface lives only in the reader simulator (truth_profile set on
+    the reader process, not here). The dry leg reports a separate `polarity_proxy`
+    channel (dipole) used for Dry->Wet promotion (W7), not as this objective.
+
+design_space:
+  name: solvent_screen
+  variables:
+    # Load-bearing screening dim: drives BOTH legs and the hidden truth. Identical
+    # to solvent_screen.yaml -- only the reader's response(polarity) is flipped.
+    - {name: solvent, kind: categorical,
+       choices: [water, methanol, ethanol, acetonitrile, dmso, acetone, toluene, hexane]}
+    # Recorded protocol conditions: actuated/validated on the wet protocol and
+    # carried through custody, but FLAT in the truth surface (polarity-only).
+    - {name: concentration, kind: continuous, low: 0.5, high: 20.0, transform: log, unit: "mM"}
+    - {name: temperature, kind: continuous, low: 15.0, high: 45.0, unit: "C"}
+    - {name: incubation_time, kind: continuous, low: 5.0, high: 120.0, unit: "min"}
+
+restrictions: []
+
+# 96-well plate matches the wet plate-reader labware (corning_96_wellplate_360ul_flat).
+plate: {rows: 8, cols: 12}
+# `replicates` = wet multi-replicate substrate count (M17 K-F; see the same note in
+# solvent_screen.yaml). On this flipped face it is the substrate that lets the K1
+# contrary verdict become DECISIVE rather than confound-refused. Wiring归 B:
+# compile_wet(exp, n_replicates=cfg.replicates, interleave=True); `interleave` is a
+# call-side kwarg (no schema field), same convention as `truth_profile`.
+# replicates=8: with promotion top_k=2 each arm holds ONE candidate, so
+# n_pairs == replicates; 3 pairs/round caps the sign-flip e at ~1.0 (letters
+# 083a/093 -- quantitative lower bound: decisive needs >=~6 pairs/round, and
+# 8 pairs gave e_product ~= 102 in the K-E acceptance runs). Do NOT lower this
+# back for well-count savings; power is bought ONLY on the measurement side
+# (letter 093 ruling (a)).
+replicates: 8
+
+sentinel:
+  n: 2
+  params: {solvent: acetonitrile, concentration: 5.0, temperature: 25.0, incubation_time: 30.0}
+  # Sentinel band is intentionally kept identical to solvent_screen.yaml (same
+  # schema/structure). NOTE: on the nonpolar_high face acetonitrile (a mid/high
+  # polarity solvent) sits on the DESCENDING tail, so its raw response is lower
+  # than on the polar_high face -- K-C/K-E should re-check the band against the
+  # nonpolar_high reader at load rather than assume this band holds (the band is a
+  # polar_high artifact; the structural shape, not the value, is what mirrors here).
+  expected_band: [0.4, 1.15]
+
+metric_range: [0.0, 1.2]   # wet `solvent_response` range (a.u.)
+
+# No expos artifact injectors here: wet artefacts (calibration_drift, dropout) are
+# injected server-side in sim_reader; dry observations carry only genuine method
+# error. Empty by design (honest boundary) -- the flipped FACE is a reader param,
+# NOT an artifact scenario, so it does not belong in this block.
+simulator: {}
+
+# G5: two rounds must run through cleanly on a small budget.
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}

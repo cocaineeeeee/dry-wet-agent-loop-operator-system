@@ -1,0 +1,96 @@
+# claims.yaml —— 人写主张登记（Claim Ledger 输入）
+#
+# 每条主张登记一次「预注册意图 + 证据钉点」，由 scripts/claim_compiler.py 编译为
+# claims/ledger.json 里的一条 ClaimDecision（血缘 schema：docs/RUN_MANIFEST_SPEC.md §9）。
+#
+# 字段：
+#   claim_id            稳定主张 id（散文只准转引此 id 的 ledger 状态，勿再抄数字）。
+#   text                人读主张句。
+#   claim_kind          superiority = 「os 在某 metric 上显著优/劣于对照」。
+#   decision_fn         判定函数按名引用（禁闭包；见 claim_compiler.DECISION_FNS）。
+#   generation          代际标签（gen-1=full_sweep / gen-2=r1_resweep / gen-3=待重聚合）。
+#   domain              主张所属证据域。
+#   evidence.source_file  证据 artifact 相对路径（sha/mtime 由编译器冻结）。
+#   evidence.selector     从 artifact 抽 p 值/效应量/cells sha 的机器规则。
+#   alpha                 显著性阈（缺省用 alpha_default）。
+#   favorable_direction   有利方向：negative=效应量为负即有利（os<对照）。
+#   deviations            关联的偏差登记 id（见 claims/deviations.yaml）。
+#   campaign_manifest     可选：钉 campaign manifest 以带出 cells sha / 代码指纹血缘。
+
+version: 1
+alpha_default: 0.05
+
+claims:
+  # ① 污染防护：os 训练集污染率显著低于 naive（Gen-1 S0.demo 域）→ supported
+  - claim_id: contamination_protection.S0demo.os_vs_naive
+    text: "os 训练集污染率显著低于 naive（S0.demo 演示域，配对精确置换检验）"
+    claim_kind: superiority
+    decision_fn: paired_significance_verdict
+    generation: gen-1
+    domain: contamination
+    evidence:
+      source_file: runs/full_sweep/report/headline_stats.json
+      selector:
+        kind: array_match
+        array_key: results
+        match: {metric: contamination, comparison: os_vs_naive}
+        p_field: p_exact_permutation
+        diff_field: observed_mean_diff
+        cells_sha_field: input_values_sha256
+    favorable_direction: negative
+
+  # ② 假最优拒斥：os 命中错误最优率显著低于 naive（Gen-1 S0.demo 域）→ supported
+  - claim_id: false_optimum_rejection.S0demo.os_vs_naive
+    text: "os 命中错误最优（wrong_optimum）率显著低于 naive（S0.demo 演示域，配对精确置换检验）"
+    claim_kind: superiority
+    decision_fn: paired_significance_verdict
+    generation: gen-1
+    domain: wrong_optimum
+    evidence:
+      source_file: runs/full_sweep/report/headline_stats.json
+      selector:
+        kind: array_match
+        array_key: results
+        match: {metric: wrong_optimum, comparison: os_vs_naive}
+        p_field: p_exact_permutation
+        diff_field: observed_mean_diff
+        cells_sha_field: input_values_sha256
+    favorable_direction: negative
+
+  # ③ H1 预注册：结构档 os regret 显著优于 robust-blind。
+  #    预注册期望 os<robust（negative 有利）；Gen-2 池化实测 +0.01606 显著为正（方向相反）
+  #    → decision_fn 自动判 rejected + 偏差指针。
+  - claim_id: h1_structural_regret.S2r3pool.os_vs_robust
+    text: "H1 预注册：结构档（S2r3 中高档池化）os 的 final_regret 显著优于 robust-blind"
+    claim_kind: superiority
+    decision_fn: paired_significance_verdict
+    generation: gen-2
+    domain: h1_regret
+    evidence:
+      source_file: runs/r1_resweep/report/aggregate_summary.json
+      selector:
+        kind: path
+        p_field: h1_verdict.pool_S2r3_mid_high.p_value
+        diff_field: h1_verdict.pool_S2r3_mid_high.mean_diff_os_minus_robust
+    favorable_direction: negative
+    deviations: [H1_REJECTED_os_worse]
+    campaign_manifest: runs/r1_resweep/campaign_manifest.json
+
+  # ④ batch 检出/归因：Gen-1/2 方向正确率全档 0.000（判反），P0 修复 + Gen-3 重聚合后解 stale。
+  #    Gen-3 证据＝逐格 (correct−inverted) 配对符号翻转置换检验；correct>inverted 有利（positive）。
+  #    实测 mean_diff=+2.675、p=1e-4、inverted=0 → 偏差闭合、编译器落 supported。
+  - claim_id: batch_detection_attribution.gen3.os
+    text: "batch shift 检出/归因链方向正确（Gen-3：全批次格 inverted=0，逐格 correct−inverted 配对置换显著）"
+    claim_kind: superiority
+    decision_fn: paired_significance_verdict
+    generation: gen-3
+    domain: batch_attribution
+    evidence:
+      source_file: runs/r1_resweep/report/m12_batch_direction_summary.json
+      selector:
+        kind: path
+        p_field: claim4_direction_significance.p_value
+        diff_field: claim4_direction_significance.mean_diff_correct_minus_inverted
+    favorable_direction: positive
+    deviations: [batch_direction_diseased]
+    campaign_manifest: runs/r1_resweep/campaign_manifest.json

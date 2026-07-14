@@ -1,0 +1,39 @@
+id	wave	target	summary	kill_test	status	reason
+D1	MU2	expos/agent/policy.py:59	this-round SUSPECT filter == -> != (cross-round leaks)	tests/test_mut_agent_policy.py::test_after_round_only_submits_this_round_suspects	killed	P1 R1 回归护栏：本轮 SUSPECT 过滤
+D2	MU2	expos/agent/policy.py:63	suggest enumeration cap re-introduces truncation-order bug	tests/test_mut_agent_policy.py::test_after_round_this_round_not_starved_by_old_suspects	killed	P1 R1 回归护栏：先枚举后封顶（防旧轮挤光）
+D3	MU2	expos/agent/policy.py:69	submitted cap off-by-one >= -> > (one extra proposal)	tests/test_mut_agent_policy.py::test_after_round_submission_cap_is_exact	killed	提交封顶 >= batch_size 边界
+G6	MU2	expos/models/response_gp.py:83	Matern length_scale_bounds tightened -> default loose	-	waived	Matern length_scale_bounds 收紧↔宽松仅小样本退化区可辨；钉具体 bounds 会僵化 GP 超参标定（红队 P3 near-equivalent）
+K1	MU2	expos/kernel/store.py:250	read_events seq regression guard <= -> < (dup seq passes)	tests/test_mut_store.py::test_duplicate_seq_reported_as_regression_not_jump	killed	seq 回退/重复守门 <=（钉专属报文，跳跃兜底会掩盖）
+K3	MU2	expos/kernel/store.py:236	middle-line corruption tolerated (lineno== -> <=)	tests/test_mut_store.py::test_middle_line_corruption_reported_as_corruption_not_jump	killed	中间行损坏 lineno== 边界（钉专属报文）
+R1	MU2	expos/models/robust_gp.py:367	select_batch_kb argmax -> argmin	tests/test_mut_robust_gp.py::test_select_batch_kb_first_pick_is_ucb_argmax	killed	RCGP KB 批量首选 UCB-argmax 方向
+R6	MU2	expos/models/robust_gp.py:313	RCGP score_pool UCB sign + -> -	tests/test_mut_robust_gp.py::test_score_pool_ucb_increases_with_kappa	killed	P1 RCGP UCB 探索项符号 μ+κσ
+S1	MU2	expos/design/sampler.py:53	min_dist dedupe neutered (>= min_dist -> >= -min_dist)	tests/test_mut_sampler.py::test_dedupe_drops_near_duplicates	killed	min_dist 去重谓词架空（直测 _dedupe_min_dist）
+T1	MU2	expos/qc/stats.py:199	mad_z drop 0.6745 sigma-consistency constant	tests/test_mut_qc_stats.py::test_mad_z_uses_0_6745_consistency_constant	killed	mad_z 0.6745 正态一致性常数（统计定义常数，钉不僵化）
+T3	MU2	expos/qc/stats.py:258	EWMA weights swapped (lam*x+(1-lam)*prev -> (1-lam)*x+lam*prev)	tests/test_mut_qc_stats.py::test_ewma_convex_weights_lambda_on_current	killed	EWMA 凸加权 λ 装向
+V2	MU2	expos/eval/scoring.py:196	contamination tau 3sigma -> 5sigma	tests/test_mut_scoring.py::test_contamination_tau_is_three_sigma_gate	killed	污染阈 τ=3σ；(3σ,5σ) 偏差钉分类
+V3	MU2	expos/eval/scoring.py:335	wrong_optimum_hit 3sigma -> 5sigma gate	tests/test_mut_scoring.py::test_wrong_optimum_hit_uses_three_sigma_gate	killed	wrong_optimum_hit 3σ 门 vs 5σ 敏感性列
+V4	MU2	expos/eval/scoring.py:343	simple_regret direction flipped (f*-best -> best-f*)	tests/test_mut_scoring.py::test_simple_regret_is_positive_gap_not_flipped_zero	killed	P1 评测核心量方向守门：regret=f*-best，翻转恒 0 全绿
+Y1	MU2	expos/design/layout.py:142	consumption-side risk ignored (default _take key risk -> 0)	tests/test_mut_layout.py::test_default_path_consumes_risk_map	killed	P1 默认放置路径 _take 风险主键消费
+Y4	MU2	expos/design/layout.py:157	cross-block enforce boundary k<=n_blocks -> k<n_blocks	tests/test_mut_layout.py::test_cross_block_enforced_at_k_equals_n_blocks	killed	跨区组强制 k<=n_blocks 边界
+Y5	MU2	expos/design/layout.py:234	capacity precheck off-by-one (needed>cap -> needed>cap+1)	tests/test_mut_layout.py::test_capacity_precheck_fires_at_capacity_plus_one	killed	容量预检 needed>capacity 边界（钉专属报文）
+C1	MU1	expos/qc/checks.py:441	edge fire boundary >  ->  >=	-	deferred_p0	qc/checks.py 归 P0 修复 agent（tests/test_qc_checks.py）；edge 边界 P3 near-equivalent
+C2	MU1	expos/qc/checks.py:546	drop edge-suppression of batch_shift (and not edge_fired)	-	deferred_p0	qc/checks.py 归 P0（batch_shift edge 抑制删除，genuine P2）
+C3	MU1	expos/qc/checks.py:631	drop drift current-round gate (>= DRIFT_Z_CURRENT)	-	deferred_p0	qc/checks.py 归 P0（drift 当前轮闸删除，genuine P2）
+C4	MU1	expos/qc/checks.py:650	glare exposure boundary > -> >=	-	deferred_p0	qc/checks.py 归 P0（glare 边界 P3 near-equivalent）
+C5	MU1	expos/qc/checks.py:691	replicate gate and -> or (CV-only can flag)	-	deferred_p0	qc/checks.py 归 P0（replicate AND→OR，genuine P1）
+C7	MU1	expos/qc/checks.py:748	out_of_range upper boundary > -> >=	-	deferred_p0	qc/checks.py 归 P0（out_of_range 边界 P3 near-equivalent）
+C8	MU1	expos/qc/checks.py:782	sentinel cross-round control-band z threshold 3.0 -> 4.0	-	deferred_p0	qc/checks.py 归 P0（sentinel z 3.0→4.0，P2）
+E2	MU1	expos/loop.py:98	n_candidates guard n<1 -> n<0	-	waived	loop n_candidates guard n<1→n<0 仅退化输入(capacity==sentinel.n)可辨，P3 near-equivalent
+E5	MU1	expos/loop.py:345	risk_map_summary n_distinct rounding 12 -> 2	-	waived	risk_map n_distinct round(,12)→(,2)；风险层 0.25 整数倍二位小数保序，等价（红队不建议加断言）
+L4	MU1	expos/kernel/lifecycle.py:102	TRUSTED confidence 1-suspicion -> constant 1.0	tests/test_mut_lifecycle.py::test_trusted_confidence_is_one_minus_suspicion	killed	adjudicate TRUSTED 置信=1-suspicion 连续证据语义
+L5	MU1	expos/kernel/lifecycle.py:212	high-risk reason strip() removed (whitespace passes)	tests/test_mut_lifecycle.py::test_high_risk_reclassify_rejects_whitespace_reason	killed	高危翻案 reason.strip() 非空审计不变量
+P7	MU1	expos/qc/policy.py:334	MedianAgg n==2 special-case -> n<=2	-	waived	MedianAgg n==2→n<=2 仅 n==1 可辨且该处 min/max==huber==唯一值，行为恒等（等价）
+Q2	MU1	expos/planner/policy.py:181	risk_map drop coarse tiering (raw p)	tests/test_mut_planner_policy.py::test_plate_risk_map_is_tiered_to_risk_tier_multiples	killed	P1 风险图 _RISK_TIER 粗分层抗饿死护栏
+Q3	MU1	expos/planner/policy.py:464	BO warmup threshold >= -> >	-	waived	BO 热身 >= → > 仅 n_train==MIN_TRAIN_FOR_BO 边界可辨，P3 near-equivalent
+Q4	MU1	expos/planner/policy.py:259	HIGH_SUSPECT_RATIO gate >= -> >	-	waived	HIGH_SUSPECT_RATIO >= → > 边界 P3 near-equivalent
+Q5	MU1	expos/planner/policy.py:468	epsilon-explore gate and -> or	-	waived	ε-explore and→or 门控 P3 near-equivalent
+Q6	MU1	expos/planner/policy.py:445	candidate second-cap slots<=0 -> <0	-	open	候选二次封顶 slots<=0→<0（越额一个候选，P2）；需 TrustAwarePlanner.plan_round 全量夹具，本波未建；建议断言见 REPORT_R3_MU.md
+F3b-D	F3b	expos/planner/policy.py:394	risk_discount 生成分支首行 raise（failure_aware 码路是否真被触达）	tests/test_mechanism_activity.py::test_D_failure_aware_reached_with_risk_discount_generator	killed	F3b：failure_aware 码路活性（5 轮闭环第 4 轮进入即触 raise）
+F3b-E	F3b	expos/planner/policy.py:493	plan_round 断开风险图生产接线 risk_map→None	tests/test_mechanism_activity.py::test_E_risk_map_nonconstant_consumed_by_layout	killed	F3b 表演性 P2：生产侧接线是否真被消费
+F3b-F3	F3b	expos/qc/policy.py:464	SoftTrustAggregation._weight 恒 1（软信任降权是否真生效）	tests/test_mechanism_activity.py::test_F3_soft_trust_downweights_quarantined_alpha	killed	F3b：soft/trusted alpha 中位比值 < 3.0 阈值即击杀
+F3b-P	F3b	expos/loop.py	build_experiment 转手 risk_map→None（观测面照常读 plan.risk_map 发射）	-	waived	已知守门盲区（F3b GREEN 放行）：转手表达式失效不可见；锚点随码演化已漂移；O3DV grade 三态验收在途覆盖派生侧
