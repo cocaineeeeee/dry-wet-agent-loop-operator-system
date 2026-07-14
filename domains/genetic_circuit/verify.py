@@ -31,7 +31,7 @@ curriculum ordering; you cannot check the motif of a graph that will not even co
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .graph import (
     SBO_TERMS,
