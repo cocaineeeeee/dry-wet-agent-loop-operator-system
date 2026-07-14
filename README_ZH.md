@@ -34,17 +34,19 @@ sequence / construct → expression / phenotype）。权威路线图见
 |---|---|---|
 | **化学（已验证的基础）** | solvent screening / catalyst screening 两域，走完整 dry–wet–agent 闭环；同一 kernel/loop 字节不动完成换域存在性证明 | ✅ 已跑通、双签（M16–M22） |
 | **生物（当前主研究方向）· 执行面** | cell-free 蛋白表达 / 基因构件筛选：Domain Contract v3（`compute_targets → ComputeTarget`，`input_kind` 支持 `molecular_geometry` / `sequence_construct`）；真实序列 dry proxy（GC / CAI / RBS / RNA-folding ΔG，全部诚实标注为 biased proxy，computed 而非 loop 结果）；三真值面（expression_high / expression_flipped / flat，design 而非 measured） | ✅ 执行面就位（M24-A） |
-| **生物 · 自适应闭环** | 第一个真正的生物闭环（`cell_free_expression_screen`）：phenotype（荧光）→ evidence → claim → knowledge。**同一 claim head 三态分离**（expression_high → supported，e-product 102→1033，+0.234；expression_flipped → rejected，e=42，−0.004；flat → insufficient，e=0，p=1.0）；wet 荧光驱动的**知识指纹迁移** d04b4d05 → 7f8ce457；**生物盲** dry 腿（33 条 dry 观测，sequence-proxy/sim，0 条 Z-matrix/geometry/PySCF）。判准 ④（knowledge → 下一轮 construct）为**机制证明，闭环内低信号区未自发触发**；percent-of-control 路径的开箱认证**待 QC 重标定** | ✅ **raw 路径上决定性跑通（M24-B）**；final QC 重标定双签 pending |
+| **生物 · 自适应闭环** | 第一个真正的生物闭环（`cell_free_expression_screen`）：phenotype（荧光）→ evidence → claim → knowledge。**同一 claim head 三态分离**（expression_high → supported，e-product 102→1033，+0.234；expression_flipped → rejected，e=42，−0.004；flat → insufficient，e=0，p=1.0）；wet 荧光驱动的**知识指纹迁移** d04b4d05 → 7f8ce457；**生物盲** dry 腿（33 条 dry 观测，sequence-proxy/sim，0 条 Z-matrix/geometry/PySCF）。**两条路径现均决定性认证**：raw readout + percent-of-control，后者经 scale-aware w_min 修（percent scale 下 effective_w_min 83.33，claim SUPPORTED，e=102→1034，CI 宽 ≪ w_min）。判准 ④（knowledge → 下一轮 construct）仍为**机制证明，闭环内低信号区未自发触发** | ✅ **双签（M24-B）：raw + controls 双路径均认证**（simulation 级） |
 | **真机（平行工程支线）** | 真实物理动作的可恢复 / 可回读 / 可提交 / 不可重放事务语义（Real-Wet Readiness Contract） | ✅ 就绪 against fake physical backend / ❌ real hardware pending；real wet-lab validation ❌ |
 
-> **诚实边界（务必留意）**：生物闭环现已在 **raw readout 路径上决定性跑通**（M24-B）：
-> 同一条 claim head 在纯 phenotype（荧光）驱动下分离出三态，wet 荧光把知识指纹迁移。
-> 两条 caveat 一字保留：**(1)** 判准 ④——被改的知识改变下一轮 construct——是**机制证明**
-> （翻转知识方向会完全重排提案），但在单条低信号 loop 内**不会自发触发**（真实的
-> explore/exploit 结构限制，不是 bug）；**(2)** **percent-of-control 路径尚未开箱认证**
-> ——决定性证据走的是 **raw readout 路径**，controls 路径认证**待 QC 重标定**。因此
-> M24-B 是**决定性的，但 final QC 重标定双签仍 pending**（尚未完全双签）。化学闭环、
-> 换域证明、真机就绪契约（对假后端）仍是**已发生的真实成就**。
+> **诚实边界（务必留意）**：生物闭环现已在 **两条认证路径上均决定性跑通**（M24-B，
+> **双签**）：同一条 claim head 在纯 phenotype（荧光）驱动下分离出三态，wet 荧光把
+> 知识指纹迁移，且 **raw readout 与 percent-of-control 两条路径均认证**——controls
+> 路径经 scale-aware `w_min` 修落地（percent scale 下 effective_w_min 83.33，claim
+> SUPPORTED，e=102→1034，CI 宽 ≪ w_min）。一条 caveat **一字保留**（双签后依然成立）：
+> 判准 ④——被改的知识改变下一轮 construct——是**机制证明**（翻转知识方向会完全重排
+> 提案），但在单条低信号 loop 内**不会自发触发**（真实的 explore/exploit 结构限制，
+> 不是 bug）。以上全部为 **simulation 级**——生物域跑在 in-silico 序列 proxy 与仿真读板
+> 上（无真湿实验）。化学闭环、换域证明、真机就绪契约（对假后端）仍是**已发生的真实
+> 成就**。
 
 **架构硬门（本项目设计核心）**：无论主方向是化学还是生物，
 `kernel / planner / evidence-compiler / ledger / knowledge-compiler` 必须保持
@@ -136,8 +138,8 @@ summary = run_mcl_loop(
 wet 腿 → QC/trust 裁决 → certification 证据裁定 → apply_claim_deltas → 下一轮`。
 证据自动产生 claim，claim 改写 knowledge 指纹，knowledge 改变下一轮候选——这条
 "数据自推导改写知识"的因果链是化学域已实证的核心，如今在第一个生物闭环里也成立
-（M24-B 在 raw 路径上决定性跑通——三态分离 + 知识指纹迁移；判准 ④ 机制证明；
-controls 路径认证待 QC 重标定）。
+（M24-B 已双签——raw + controls 双路径均认证；三态分离 + 知识指纹迁移；判准 ④
+机制证明，simulation 级）。
 
 ### CLI v2 与评测
 
@@ -236,8 +238,8 @@ dry_wet_agent_os/
 | M21–M22 | 域契约 v2 + provider 五 hook + 溯源补全 + 性质测试文化 | ✅ done（双签） |
 | M23 | Real-Wet Readiness Contract（真机就绪事务面，对假物理后端；真硬件 pending） | ✅ done（双签） |
 | **M24-A** | **生物执行面：Domain Contract v3（compute_targets/ComputeTarget）+ 序列 dry proxy + 三真值面** | **✅ 就位** |
-| **M24-B** | **自适应生物闭环（cell-free 表达：phenotype → evidence → claim → knowledge）**——raw 路径上三态分离 + 指纹迁移；判准 ④ 机制证明（闭环内未自发触发）；controls 路径认证待 QC 重标定 | **✅ 决定性（raw 路径）；final QC 重标定双签 pending** |
-| M25+ | 生成式序列优化 / 蛋白·酶活 / 细胞响应闭环 → 真正的 Biological Research OS | ⏳ 规划中 |
+| **M24-B** | **自适应生物闭环（cell-free 表达：phenotype → evidence → claim → knowledge）**——三态分离 + 指纹迁移；raw + controls 双路径均认证（controls 经 scale-aware w_min 修，effective_w_min 83.33，e=102→1034）；判准 ④ 机制证明（闭环内未自发触发）；simulation 级 | **✅ 双签（raw + controls 双路径均认证）** |
+| M25–M29 | **生物 Program 改 breadth-first**：五器官并行做成 Biology-Primary OS 的 **v0.1 vertical-slice 骨架**——M26 genetic circuits（typed circuit graph + 5-tier verify gate + 时序动态 faces，14 测试）与 M27 perturbation（model-tournament + discriminative baseline-gate，17 测试）较完整（各自 domain-local e2e + faces + 测试绿）；M25 generative construct / M28 discovery agents / M29 protocol execution 为 **runnable skeleton**（域本地 smoke + seam 清单）。全部 skeleton/simulation 级；e2e 整环接线待 integration owner 的共享 seam（权威见 `docs/BIOLOGY_PROGRAM_2026.md` §1.5） | 🔨 in progress（v0.1 骨架） |
 
 > 权威里程碑台账见 `CHECKPOINTS.md`（含验证命令与偏离记录）；生物主线路线图见
 > `docs/ROADMAP_BIOLOGY_PRIMARY.md`。
