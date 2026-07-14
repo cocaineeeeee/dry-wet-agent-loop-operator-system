@@ -160,6 +160,60 @@ def test_edge_floor_scale_aware_not_blind_bio_real_artifact_fires():
     assert all(susp[w] >= 0.6 for w in edge_wells), {w: susp[w] for w in edge_wells}
 
 
+def _affine(obs, a, b):
+    """Percent-of-control-style affine readout transform value -> a*value + b (the offset b is
+    what dampens value-based estimators; residual-based statistics see it cancel)."""
+    for o in obs:
+        if o.result.value is not None:
+            o.result.value = a * o.result.value + b
+
+
+def test_edge_effect_genuine_artifact_caught_at_both_scales():
+    """Acceptance (M24-B family audit): a genuine RELATIVE edge anomaly is still caught at BOTH
+    the chemistry raw scale AND the biology percent-of-control scale — scale-AWARE, not
+    scale-disabled. Under the affine transform (value -> a*value + b) the edge residual diff
+    scales by `a` and the span-relative floor scales to match, so the verdict is preserved."""
+    scen = [{"injector": "edge_evaporation", "params": {"strength": 0.5, "decay_wells": 1.0}}]
+    exp_c, obs_c = make_board(scen, seed=2, n_cands=20)
+    rep_c, _ = run_qc(exp_c, obs_c, moran_perm=FAST, metric_range=(0.0, 1.2))
+    exp_b, obs_b = make_board(scen, seed=2, n_cands=20)
+    _affine(obs_b, 125.0, -12.5)  # neg=0.1, pos=0.9 -> a=125, b=-12.5 (raw ~0.85 -> ~93)
+    rep_b, _ = run_qc(exp_b, obs_b, moran_perm=FAST, metric_range=(0.0, 200.0))
+
+    def edge_fired(rep, obs):
+        return any(c.evidence.get("fired")
+                   for o in obs for c in rep[o.obs_id].checks if c.name == "edge_effect")
+    assert edge_fired(rep_c, obs_c)   # chemistry raw scale
+    assert edge_fired(rep_b, obs_b)   # biology percent scale -- still caught (not blinded)
+
+
+def test_dimensionless_siblings_are_scale_invariant():
+    """Family-audit pin (letter 147 checklist): the sibling structural checks whose thresholds
+    are DIMENSIONLESS -- row/col gradient t-statistic here -- produce the SAME statistic (up to
+    floating-point noise from the affine multiply) and the SAME verdict under the affine
+    percent-of-control transform. Their fire decision cannot shift with metric_range, so they
+    need no scale-aware retune (edge is the sole unit-scale floor)."""
+    scen = [{"injector": "thermal_gradient", "params": {"axis": "row", "magnitude": 0.6}}]
+    exp_c, obs_c = make_board(scen, seed=5, n_cands=20)
+    rep_c, _ = run_qc(exp_c, obs_c, moran_perm=FAST, metric_range=(0.0, 1.2))
+    exp_b, obs_b = make_board(scen, seed=5, n_cands=20)
+    _affine(obs_b, 125.0, -12.5)
+    rep_b, _ = run_qc(exp_b, obs_b, moran_perm=FAST, metric_range=(0.0, 200.0))
+
+    def grad_stat(rep, obs):
+        for o in obs:
+            for c in rep[o.obs_id].checks:
+                if c.name == "row_col_gradient":
+                    return (c.evidence.get("t_row"), c.evidence.get("t_col"),
+                            c.evidence.get("fired"))
+        return None
+    t_row_c, t_col_c, fired_c = grad_stat(rep_c, obs_c)
+    t_row_b, t_col_b, fired_b = grad_stat(rep_b, obs_b)
+    assert fired_c == fired_b                              # verdict identical across scales
+    assert t_row_b == pytest.approx(t_row_c, rel=1e-9)     # t-stat invariant (modulo FP)
+    assert t_col_b == pytest.approx(t_col_c, rel=1e-9)
+
+
 def test_batch_artifact_hits_one_batch():
     """批次位移 shift=-0.18（近满板 45 孔，与 M9 闭环板同量级）：身份无关 shift_hat 命中、
     只牵连单批（非全板连坐）。17 孔玩具板下棋盘格使去身份残差吸收批差、低于探测地板——见

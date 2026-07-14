@@ -117,7 +117,13 @@ replicate_kind: biological
 sentinel:
   n: 2
   params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}
-  expected_band: [0.6, 1.05]
+  # UNIT: percent-of-control (normalized readout scale, mcl `_NORMALIZED_METRIC_RANGE`
+  # (0,200)), NOT raw a.u. When the controls trio is declared (below), the readout is
+  # percent-of-control normalized before QC, so this reference sentinel (J23100 == the
+  # positive control) reads ~100%. Declared in the normalized unit the readout actually
+  # produces so the band is never mis-scaled (letter 150, session-B handoff). (Raw a.u.
+  # was [0.6,1.05]; ~131x = ~[79,138], centered on the 100% positive reference => [95,105].)
+  expected_band: [95.0, 105.0]
 
 # ---- M24-B assay controls (bio ruling ①; DomainConfig.controls / ControlSpec, landed by
 # session B). Declaring this trio ACTIVATES the percent-of-control readout normalization

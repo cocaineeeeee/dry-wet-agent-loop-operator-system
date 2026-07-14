@@ -237,10 +237,20 @@ def test_controls_reach_wet_experiment_layout():
 
 
 def test_no_controls_lays_none():
-    """A domain with no controls block (every chemistry domain, and the bare bio yaml) lays
-    none -- the ExperimentObject.controls default, byte-identical wet plate."""
+    """A domain with NO controls block (every chemistry domain) lays none -- the
+    ExperimentObject.controls default, byte-identical wet plate."""
     assert _domain_controls(load_domain(_CATALYST)) == []
-    assert _domain_controls(load_domain(_BIO)) == []
+
+
+def test_bio_controls_dispatched_with_reference_semantic_role():
+    """The shipped bio yaml (letter 147 §1) declares negative/positive/reference; the wiring
+    maps native neg/pos kinds and routes reference -> kind=sentinel + params.semantic_role
+    so ``to_unit`` never treats it as a design point."""
+    controls = _domain_controls(load_domain(_BIO))
+    kinds = sorted(c.kind for c in controls)
+    assert kinds == ["negative", "positive", "sentinel"]
+    ref = [c for c in controls if c.kind == "sentinel"]
+    assert ref and ref[0].params.get("semantic_role") == "reference"
 
 
 # ============================================================ 3. plate_offset injection
