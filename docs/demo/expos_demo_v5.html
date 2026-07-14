@@ -189,7 +189,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
   <!-- honesty badge -->
   <div id="honesty">
     <b>Dry:</b> real computation (chemistry PySCF · biology sequence proxy) &nbsp;·&nbsp; <b>Wet:</b> simulated instrument<br>
-    <b>Agent:</b> deterministic by default &nbsp;·&nbsp; biological loop: not yet run (M24-B)
+    <b>Agent:</b> deterministic by default &nbsp;·&nbsp; biological loop: closes decisively on the raw path (M24-B) · controls-path certification pending QC rescale
   </div>
 
   <!-- source / provenance badge -->
@@ -388,16 +388,16 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
   <!-- ================= sLedger — six-criteria honesty ledger ================= -->
   <section class="scene" id="sLedger">
     <div class="kicker">05 · Honesty ledger</div>
-    <h2>The six criteria for the first biological loop—and our honest progress</h2>
+    <h2>The six criteria for the first biological loop—decisive on the raw path, caveats kept</h2>
     <div class="crit">
       <div class="critrow done rv d1"><span class="cn">①</span><span class="ct">a construct never fakes a molecular geometry</span><span class="cs">✅ by design — Contract v3</span></div>
-      <div class="critrow done rv d2"><span class="cn">⑥</span><span class="ct">kernel / ledger / certification stay biology-blind</span><span class="cs">✅ countersigned — kernel unchanged</span></div>
-      <div class="critrow pend rv d3"><span class="cn">②</span><span class="ct">phenotype data truly changes a claim</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d4"><span class="cn">③</span><span class="ct">the changed claim changes the knowledge state</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d5"><span class="cn">④</span><span class="ct">the changed knowledge changes the next round's construct</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d6"><span class="cn">⑤</span><span class="ct">all three faces (high / flipped / flat) hold in a running loop</span><span class="cs">⏳ pending M24-B</span></div>
+      <div class="critrow done rv d2"><span class="cn">②</span><span class="ct">phenotype data truly changes a claim — three-state separation on one claim head</span><span class="cs">✅ high→supported · flipped→rejected · flat→insufficient</span></div>
+      <div class="critrow done rv d3"><span class="cn">③</span><span class="ct">the changed claim changes the knowledge state</span><span class="cs">✅ fingerprint d04b4d05 → 7f8ce457</span></div>
+      <div class="critrow pend rv d4"><span class="cn">④</span><span class="ct">the changed knowledge changes the next round's construct</span><span class="cs">✅ mechanism-proven · ⚠️ not self-triggered in-loop</span></div>
+      <div class="critrow done rv d5"><span class="cn">⑤</span><span class="ct">all three faces (high / flipped / flat) hold in a running loop</span><span class="cs">✅ in the running loop · 12/12 tests</span></div>
+      <div class="critrow done rv d6"><span class="cn">⑥</span><span class="ct">kernel / ledger / certification stay biology-blind</span><span class="cs">✅ countersigned — 0 biology literals</span></div>
     </div>
-    <div class="critstate rv d7">The execution surface is in place; for the biological loop (phenotype → knowledge → next construct), <b>no result exists yet, and this film shows no biological verdict</b>. It is the next milestone — M24-B (pending).</div>
+    <div class="critstate rv d7">The biological loop <b>closes decisively on the raw readout path</b> — three-state separation on one claim head (expression_high → supported, e-product 102→1033, +0.234; expression_flipped → rejected, e=42, −0.004; flat → insufficient, e=0, p=1.0) plus a knowledge-fingerprint migration. Proposal reordering (④) is <b>mechanism-proven, not self-triggered inside a single low-signal loop</b>; the percent-of-control path's box-certification is <b>pending a QC rescale</b>. Decisive — final QC-rescale countersign pending.</div>
   </section>
 
   <!-- ================= sRoad — roadmap ================= -->
@@ -407,9 +407,9 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
     <div class="roadmap">
       <div class="rmnode done rv d1"><div class="rstage">M16–M20 · done</div><div class="rt">Chemistry Foundation</div>2 domains, kernel untouched</div>
       <div class="rmarrow rv d2">→</div>
-      <div class="rmnode now rv d2"><div class="rstage">M24-A · in progress</div><div class="rt">Contract v3</div>biology execution surface built</div>
+      <div class="rmnode done rv d2"><div class="rstage">M24-A · done</div><div class="rt">Contract v3</div>biology execution surface built</div>
       <div class="rmarrow rv d3">→</div>
-      <div class="rmnode next rv d3"><div class="rstage">M24-B · next</div><div class="rt">Cell-Free Expression Loop</div>the first real biological loop</div>
+      <div class="rmnode now rv d3"><div class="rstage">M24-B · decisive · countersign pending</div><div class="rt">Cell-Free Expression Loop</div>closes decisively on the raw path (three-state + fingerprint migration); controls-path certification pending QC rescale</div>
       <div class="rmarrow rv d4">→</div>
       <div class="rmnode later rv d4"><div class="rstage">M25</div><div class="rt">Sequence Optimization</div>generate &amp; test design</div>
       <div class="rmarrow rv d5">→</div>
@@ -431,7 +431,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
     <div class="finelines rv d4">
       Real dry-leg computation (chemistry PySCF; biology sequence-feature proxy) · credible simulated wet leg<br>
       Domain swap proven across 2 chemistry domains; biology execution surface built (Contract v3)<br>
-      Biological loop: in progress (M24-B) — no biological result is claimed yet<br>
+      Biological loop (M24-B): closes decisively on the raw path — three-state separation + knowledge-fingerprint migration; proposal reordering mechanism-proven (not self-triggered in-loop); controls-path certification pending a QC rescale<br>
       Real hardware not connected — a parallel engineering track
     </div>
   </section>
@@ -446,7 +446,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
 </div></div>
 
 <script>
-/* ---------- scene timeline (chemistry numbers captured from final runs; biology = architecture only) ---------- */
+/* ---------- scene timeline (chemistry + biology numbers captured from final runs; M24-B biology verdicts trace to runs/m24b_bio_nc, raw readout path) ---------- */
 const SCENES = [
   {id:'s0',      t:0,   name:'cold open · loop engine'},
   {id:'sLoop',   t:13,  name:'the dry-wet-agent loop'},
@@ -462,13 +462,13 @@ const TOTAL = 173;   /* < 180s */
 const SHORT = ['s0','sLoop','sChem','sPivot','sLedger','sClose'];
 const SHORT_DUR = {s0:9, sLoop:16, sChem:14, sPivot:13, sLedger:15, sClose:10};
 
-/* ---------- per-scene provenance (frozen; every chem number traces to a run, every bio item to a file) ---------- */
+/* ---------- per-scene provenance (frozen; every chem number traces to a run; M24-B biology verdicts trace to runs/m24b_bio_nc; architecture items trace to files) ---------- */
 const SOURCE = {
   sChem:'Source: runs/corun_flipped · seed=7 · rounds=4 · replicates=8 · Gate 12: CHAIN COMPLETE',
   sSwap:'Source: runs/m20_catalyst_full_loop · seed=7 · rounds=2 · replicates=8 · Gate 12: CHAIN COMPLETE',
   sPivot:'Strategy: docs/ROADMAP_BIOLOGY_PRIMARY.md · biology = primary direction (2026-07-14)',
   sExec:'Contract v3: docs/M24_CONTRACT_V3.md · dry proxy: expos/adapters/dry/sequences.py (computed, not a loop result) · truth faces: expos/adapters/wet/sim_reader.py (design, not measured)',
-  sLedger:'Criteria: docs/ROADMAP_BIOLOGY_PRIMARY.md · status verified 2026-07-14 · M24-B not yet run',
+  sLedger:'Source: runs/m24b_bio_nc (cell_free_expression_screen · raw readout path) · three-state verdicts + evidence factors + knowledge fingerprint d04b4d05→7f8ce457 · tests/test_m24_bio_domain.py 12 passed · controls-path certification pending QC rescale',
   sRoad:'Roadmap: docs/ROADMAP_BIOLOGY_PRIMARY.md · M24-B = next milestone · hardware = parallel track (M26)',
 };
 

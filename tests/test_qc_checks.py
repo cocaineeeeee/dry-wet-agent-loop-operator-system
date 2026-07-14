@@ -17,9 +17,12 @@ import pytest
 from expos.adapters.ingest import raw_to_observations
 from expos.adapters.sim_crystal import CrystalSim
 from expos.qc.checks import (
+    EDGE_FIRE,
+    EDGE_FULL,
     CheckError,
     PlateContext,
     QCHistory,
+    _EDGE_REFERENCE_SPAN,
     _batch_fallback_pick,
     _batch_select,
     _batch_sentinel_pick,
@@ -72,6 +75,89 @@ def test_edge_artifact_flags_edge_not_center():
         assert "edge_effect" in reports[[o for o in obs
                 if o.layout_meta.well_id == w][0].obs_id].flags
     assert plate.edge_paired_diff > 0.02  # 边缘抬升 → 正差
+
+
+# ------------------------------------------------ scale-aware edge floor (M24-B, letter 147)
+#
+# The edge_effect structural check had an ABSOLUTE floor (0.018/0.045) implicitly calibrated to
+# the chemistry measurement scale (metric_range span ~1.2 a.u., noise_sd~0.02). When a domain
+# normalizes readouts to a different scale (biology percent-of-control, span 200) the same
+# spatial noise is amplified ~167x and mis-fires the floor -> replicates collapse to SUSPECT ->
+# certification power is killed. The fix expresses the floor as a fraction of the metric span so
+# it tracks the scale (domain-neutral) WITHOUT changing chemistry behavior. edge is the sole
+# absolute-metric-scale structural floor (batch shift_hat / gradient t / drift & replicate z /
+# Moran are already dimensionless), so it is the only check retuned.
+
+def _impose_edge_pattern(exp, obs, base, edge_delta, moran_perm=99):
+    """Overwrite every observation value to base (+edge_delta on the outer ring, d_edge==0),
+    giving a clean, scale-independent edge-vs-inner spatial pattern. Returns the d_edge map."""
+    _, plate0 = run_qc(exp, obs, moran_perm=moran_perm)
+    d_edge = plate0.d_edge
+    for o in obs:
+        o.result.value = base + (edge_delta if d_edge[o.layout_meta.well_id] == 0 else 0.0)
+    return d_edge
+
+
+def _edge_check(reports, obs, wid):
+    o = [o for o in obs if o.layout_meta.well_id == wid][0]
+    return [c for c in reports[o.obs_id].checks if c.name == "edge_effect"][0]
+
+
+def test_edge_floor_byte_identical_on_chemistry_scale():
+    """Byte-identity anchor: on the [0, 1.2] chemistry scale the effective edge floor equals the
+    pre-fix ABSOLUTE value EXACTLY (fraction derived from the reference span -> factor 1.0)."""
+    exp, obs = make_board([], seed=1)
+    # default metric_range == chemistry (0, 1.2)
+    reports, _ = run_qc(exp, obs, moran_perm=FAST)
+    ec = reports[obs[0].obs_id].checks
+    ev = [c for c in ec if c.name == "edge_effect"][0].evidence
+    assert ev["fire"] == 0.018 == EDGE_FIRE          # exact, not approx
+    assert ev["full"] == 0.045 == EDGE_FULL
+    assert ev["metric_span"] == 1.2
+    # explicit derivation: effective floor == fraction * span == historical absolute value
+    assert EDGE_FIRE / _EDGE_REFERENCE_SPAN * 1.2 == 0.018
+
+
+def test_edge_floor_scale_aware_bio_drift_ramp_does_not_fire():
+    """Crux (letter 147): the SAME drift-amplified edge diff (~2.3 on a (0,200) percent scale,
+    the ~+-3 spatial spread) that mis-fires under the chemistry-scale floor does NOT fire under
+    the scale-aware biology floor. Identical data, opposite verdict by scale."""
+    exp, obs = make_board([], seed=1)
+    d_edge = _impose_edge_pattern(exp, obs, base=100.0, edge_delta=2.5)
+    edge_wells = [w for w, d in d_edge.items() if d == 0]
+
+    # chemistry-scale floor (0.018) -> the drift-amplified diff MIS-FIRES (the pre-fix bug)
+    rep_chem, plate_chem = run_qc(exp, obs, moran_perm=99, metric_range=(0.0, 1.2))
+    diff = abs(plate_chem.edge_paired_diff)
+    assert diff > EDGE_FIRE                            # exceeds the old absolute floor
+    assert _edge_check(rep_chem, obs, edge_wells[0]).evidence["fired"] is True
+
+    # biology percent-of-control scale (0, 200): floor scales up ~167x -> NO mis-fire
+    rep_bio, plate_bio = run_qc(exp, obs, moran_perm=99, metric_range=(0.0, 200.0))
+    assert plate_bio.edge_paired_diff == plate_chem.edge_paired_diff  # scale doesn't move the stat
+    bio_ec = _edge_check(rep_bio, obs, edge_wells[0])
+    assert bio_ec.evidence["fire"] == pytest.approx(3.0)  # 0.018 * (200/1.2)
+    assert diff < bio_ec.evidence["fire"]
+    assert bio_ec.evidence["fired"] is False
+    assert bio_ec.score == 0.0
+    # every edge well stays clean on the edge axis (no edge-driven suspicion)
+    edge_scores = {w: _edge_check(rep_bio, obs, w).score for w in edge_wells}
+    assert all(s == 0.0 for s in edge_scores.values()), edge_scores
+
+
+def test_edge_floor_scale_aware_not_blind_bio_real_artifact_fires():
+    """Kill-comment: scale-AWARE, not scale-disabled. A genuinely large edge artifact on the
+    (0,200) percent scale (proportionally large diff) STILL fires -> the check is not blinded."""
+    exp, obs = make_board([], seed=1)
+    d_edge = _impose_edge_pattern(exp, obs, base=100.0, edge_delta=20.0)
+    edge_wells = [w for w, d in d_edge.items() if d == 0]
+    rep, plate = run_qc(exp, obs, moran_perm=99, metric_range=(0.0, 200.0))
+    bio_ec = _edge_check(rep, obs, edge_wells[0])
+    assert abs(plate.edge_paired_diff) > bio_ec.evidence["full"]  # > 7.5 -> full score
+    assert bio_ec.evidence["fired"] is True
+    assert bio_ec.score == 1.0
+    susp = _susp(rep, obs)
+    assert all(susp[w] >= 0.6 for w in edge_wells), {w: susp[w] for w in edge_wells}
 
 
 def test_batch_artifact_hits_one_batch():

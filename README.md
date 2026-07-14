@@ -44,15 +44,22 @@ sequence / construct → expression / phenotype). The authoritative roadmap is
 |---|---|---|
 | **Chemistry (validated foundation)** | solvent screening / catalyst screening, full dry–wet–agent loop; domain-swap existence proof with the same kernel/loop byte-unchanged | ✅ done & countersigned (M16–M22) |
 | **Biology (primary direction) · execution surface** | cell-free protein expression / genetic-construct screening: Domain Contract v3 (`compute_targets → ComputeTarget`, `input_kind` supports `molecular_geometry` / `sequence_construct`); real sequence dry proxies (GC / CAI / RBS / RNA-folding ΔG, all honestly labelled biased proxies, *computed* rather than loop results); three truth faces (expression_high / expression_flipped / flat, by *design* not measured) | ✅ execution surface in place (M24-A) |
-| **Biology · adaptive closed loop** | a complete, provenance-aware loop: sequence → phenotype → evidence → claim → knowledge → redesigned construct | 🔜 next milestone (M24-B), **not yet run** |
+| **Biology · adaptive closed loop** | first real biological loop (`cell_free_expression_screen`): phenotype (fluorescence) → evidence → claim → knowledge. **Three-state separation on one claim head** (expression_high → supported, e-product 102→1033, +0.234; expression_flipped → rejected, e=42, −0.004; flat → insufficient, e=0, p=1.0); **knowledge-fingerprint migration** d04b4d05 → 7f8ce457 driven by wet fluorescence; **biology-blind** dry leg (33 dry obs, sequence-proxy/sim, 0 Z-matrix/geometry/PySCF). Criterion ④ (knowledge → next construct) is **mechanism-proven, not self-triggered inside one low-signal loop**; percent-of-control path's box-certification **pending a QC rescale** | ✅ **decisive on the raw path (M24-B)**; countersign pending final QC rescale |
 | **Real hardware (parallel engineering track)** | transaction-safe semantics for real physical actions — recoverable / re-readable / committable / non-replayable (Real-Wet Readiness Contract) | ✅ ready against a fake physical backend / ❌ real hardware pending; real wet-lab validation ❌ |
 
-> **Honest boundary (please note).** The biology **execution surface** (sequence
-> dry proxies, contract v3, truth faces) is in place, but the **biology adaptive
-> closed loop is not yet done** — this README does *not* claim the biological
-> sequence→phenotype→knowledge loop has run or show its results. The chemistry
-> loop, the domain-swap proof, and the real-wet readiness contract (against a fake
-> backend) are **things that actually happened**; the biology loop is **next**.
+> **Honest boundary (please note).** The biology loop now **closes decisively on
+> the raw readout path** (M24-B): a single claim head separates into three states
+> under pure phenotype (fluorescence), and wet fluorescence migrates the knowledge
+> fingerprint. Two caveats are kept exactly: **(1)** criterion ④ — the changed
+> knowledge changing the next round's construct — is **mechanism-proven** (flipping
+> the knowledge direction fully reorders the proposal) but does **not self-trigger
+> inside a single low-signal loop** (a real explore/exploit limit, not a bug); **(2)**
+> the **percent-of-control path** is **not yet box-certified** — the decisive
+> evidence runs on the **raw readout path**, and controls-path certification is
+> **pending a QC rescale**. So M24-B is **decisive, with final QC-rescale
+> countersign still pending** (not yet fully countersigned). The chemistry loop,
+> the domain-swap proof, and the real-wet readiness contract (against a fake
+> backend) remain **things that actually happened**.
 
 **Architecture hard gate (the project's core design principle).** Whether the
 primary direction is chemistry or biology, `kernel / planner / evidence-compiler /
@@ -159,8 +166,10 @@ gate → wet leg → QC/trust adjudication → certification decision →
 apply_claim_deltas → next round`. Evidence produces a claim automatically, the
 claim rewrites the knowledge fingerprint, and the knowledge changes the next
 round's candidates — this "data self-derives new knowledge" causal chain is the
-core demonstrated in the chemistry domains (the biology execution surface is in
-place; the biology loop is M24-B).
+core demonstrated in the chemistry domains, and now in the first biological loop
+too (M24-B closes decisively on the raw path — three-state separation + knowledge-
+fingerprint migration; criterion ④ mechanism-proven; controls-path certification
+pending a QC rescale).
 
 ### CLI v2 and evaluation
 
@@ -265,7 +274,7 @@ dry_wet_agent_os/
 | M21–M22 | Domain contract v2 + provider five-hook + provenance completion + property-testing culture | ✅ done (countersigned) |
 | M23 | Real-Wet Readiness Contract (real-wet transaction surface, against fake physical backend; real hardware pending) | ✅ done (countersigned) |
 | **M24-A** | **Biology execution surface: Domain Contract v3 (compute_targets/ComputeTarget) + sequence dry proxies + three truth faces** | **✅ in place** |
-| **M24-B** | **Adaptive biological closed loop (sequence → phenotype → knowledge → redesign)** | **🔜 next, not yet run** |
+| **M24-B** | **Adaptive biological closed loop (cell-free expression: phenotype → evidence → claim → knowledge)** — three-state separation + fingerprint migration on the raw path; criterion ④ mechanism-proven (not self-triggered in-loop); controls-path certification pending QC rescale | **✅ decisive (raw path); countersign pending final QC rescale** |
 | M25+ | Generative sequence optimization / protein·enzyme assay / cellular-response loop → a true Biological Research OS | ⏳ planned |
 
 > The authoritative milestone ledger is `CHECKPOINTS.md` (verification commands +
