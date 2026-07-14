@@ -1,277 +1,327 @@
-# expos —— Adaptive Dry–Wet–Agent Scientific Loop
+# expos — Adaptive Dry–Wet–Agent Scientific Loop
 
-> English: [README_EN.md](README_EN.md)
+> 中文版见 [README_ZH.md](README_ZH.md)
 
-> 一个**域中立**的自适应「干–湿–agent」科学闭环研究 OS。核心是一个不懂具体科学域的
-> loop 引擎：**propose → dry compute → promotion gate → wet measurement → evidence
-> compile → claim → knowledge → next proposal**，agent 在其中做自适应决策。换域 =
-> 换一个 domain 配置 + provider/adapter，**kernel / planner / evidence-compiler /
-> ledger / knowledge-compiler 字节不动**。
+**expos** is a **domain-neutral** research OS built around a self-adaptive
+"dry–wet–agent" scientific loop. Its heart is a loop engine that knows nothing
+about any specific science domain: **propose → dry compute → promotion gate →
+wet measurement → evidence compile → claim → knowledge → next proposal**, with
+an agent making adaptive decisions inside it. Changing domain = one domain config
++ a provider/adapter, with **the kernel / planner / evidence-compiler / ledger /
+knowledge-compiler unchanged byte for byte.**
 
-**电梯陈述：**
-- **一个闭环，不是一条管线**：内核只有两个持久科学对象（ExperimentObject /
-  ObservationObject）+ 追加式事件日志 + 轮次状态机；design / dry / 晋升门 / wet /
-  QC / 证据聚合 / claim ledger / knowledge compiler / agent 全是**可替换模块**。
-- **域中立是硬门，不是口号**：kernel 只理解七个概念——candidate / observation /
-  trust / evidence(claim) / knowledge / decision（+ ExperimentObject 载体）；一切
-  化学 / 生物语义**只允许住在 domain / provider / adapter / QC 层**。这一条已由
-  "同一 kernel 字节不动换域跑通"实证（见下方状态台账），是本项目最核心的卖点。
-- **观测默认是"待裁决证据"，不是数据**：任何测量值进入系统时 `trust = PENDING`，
-  须经 QC 裁决后才被路由；实验证据经统计聚合产出 claim（supported / rejected /
-  qualified / insufficient），写回 ledger，重编译成 knowledge，再改变下一轮提案——
-  **数据自推导地改写知识指纹链**，而非外部注入。
+**Elevator pitch:**
+- **One closed loop, not a pipeline.** The kernel holds only two persistent
+  scientific objects (ExperimentObject / ObservationObject) plus an append-only
+  event log and a round state machine; design / dry / promotion gate / wet / QC /
+  evidence aggregation / claim ledger / knowledge compiler / agent are all
+  **swappable modules**.
+- **Domain-neutrality is a hard gate, not a slogan.** The kernel understands only
+  seven concepts — candidate / observation / trust / evidence(claim) / knowledge /
+  decision (+ the ExperimentObject carrier); all chemistry / biology semantics
+  are **allowed to live only in the domain / provider / adapter / QC layers.**
+  This has been demonstrated by "the same kernel running a different domain byte
+  for byte" (see the status ledger below) — it is the project's core selling point.
+- **An observation is "evidence pending adjudication," not data.** Any measurement
+  enters with `trust = PENDING` and is routed only after QC adjudication;
+  experimental evidence is statistically aggregated into a claim (supported /
+  rejected / qualified / insufficient), written back to the ledger, recompiled
+  into knowledge, and drives the next round's proposal — **data rewrites the
+  knowledge-fingerprint chain by self-derivation**, not by external injection.
 
 ---
 
-## 研究方向与诚实状态台账
+## Research direction & honest status ledger
 
-expos 于 **2026-07-14 战略转向：生物成为主研究方向**。化学两域已完成其最重要的
-使命——证明 runtime 可换域；生物才真正逼系统面对新科学物件（molecule / reaction →
-sequence / construct → expression / phenotype）。权威路线图见
-[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md)。
+expos made a **strategic pivot on 2026-07-14: biology becomes the primary
+scientific direction.** The two chemistry domains have already served their most
+important purpose — proving the runtime is domain-swappable; biology is what
+truly forces the system to face new scientific objects (molecule / reaction →
+sequence / construct → expression / phenotype). The authoritative roadmap is
+[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md).
 
-| 方向 | 内容 | 状态 |
+| Direction | What | Status |
 |---|---|---|
-| **化学（已验证的基础）** | solvent screening / catalyst screening 两域，走完整 dry–wet–agent 闭环；同一 kernel/loop 字节不动完成换域存在性证明 | ✅ 已跑通、双签（M16–M22） |
-| **生物（当前主研究方向）· 执行面** | cell-free 蛋白表达 / 基因构件筛选：Domain Contract v3（`compute_targets → ComputeTarget`，`input_kind` 支持 `molecular_geometry` / `sequence_construct`）；真实序列 dry proxy（GC / CAI / RBS / RNA-folding ΔG，全部诚实标注为 biased proxy，computed 而非 loop 结果）；三真值面（expression_high / expression_flipped / flat，design 而非 measured） | ✅ 执行面就位（M24-A） |
-| **生物 · 自适应闭环** | 完整的 sequence → phenotype → evidence → claim → knowledge → 重设计 construct 的 provenance-aware 闭环 | 🔜 下一里程碑（M24-B），**尚未跑出结果** |
-| **真机（平行工程支线）** | 真实物理动作的可恢复 / 可回读 / 可提交 / 不可重放事务语义（Real-Wet Readiness Contract） | ✅ 就绪 against fake physical backend / ❌ real hardware pending；real wet-lab validation ❌ |
+| **Chemistry (validated foundation)** | solvent screening / catalyst screening, full dry–wet–agent loop; domain-swap existence proof with the same kernel/loop byte-unchanged | ✅ done & countersigned (M16–M22) |
+| **Biology (primary direction) · execution surface** | cell-free protein expression / genetic-construct screening: Domain Contract v3 (`compute_targets → ComputeTarget`, `input_kind` supports `molecular_geometry` / `sequence_construct`); real sequence dry proxies (GC / CAI / RBS / RNA-folding ΔG, all honestly labelled biased proxies, *computed* rather than loop results); three truth faces (expression_high / expression_flipped / flat, by *design* not measured) | ✅ execution surface in place (M24-A) |
+| **Biology · adaptive closed loop** | a complete, provenance-aware loop: sequence → phenotype → evidence → claim → knowledge → redesigned construct | 🔜 next milestone (M24-B), **not yet run** |
+| **Real hardware (parallel engineering track)** | transaction-safe semantics for real physical actions — recoverable / re-readable / committable / non-replayable (Real-Wet Readiness Contract) | ✅ ready against a fake physical backend / ❌ real hardware pending; real wet-lab validation ❌ |
 
-> **诚实边界（务必留意）**：生物的**执行面**（序列 dry proxy、contract v3、真值面）
-> 已就位，但**生物自适应闭环尚未完成**——本 README 不声称生物 sequence→phenotype→
-> knowledge 闭环已跑通或展示其结果。化学闭环、换域证明、真机就绪契约（对假后端）是
-> **已发生的真实成就**；生物闭环是**下一步**。
+> **Honest boundary (please note).** The biology **execution surface** (sequence
+> dry proxies, contract v3, truth faces) is in place, but the **biology adaptive
+> closed loop is not yet done** — this README does *not* claim the biological
+> sequence→phenotype→knowledge loop has run or show its results. The chemistry
+> loop, the domain-swap proof, and the real-wet readiness contract (against a fake
+> backend) are **things that actually happened**; the biology loop is **next**.
 
-**架构硬门（本项目设计核心）**：无论主方向是化学还是生物，
-`kernel / planner / evidence-compiler / ledger / knowledge-compiler` 必须保持
-**域中立（生物盲）**。若接生物必须改这些，即证明 domain abstraction 还不够干净——
-那是"发现，如实报告"，不是偷偷改。换域的全部代价被约束在 domain / provider /
-adapter / QC 层。
-
----
-
-## 两条 loop 与核心思想
-
-expos 有两条 loop 驱动器：
-
-1. **Dry–Wet–Agent 闭环（`expos/mcl.py::run_mcl_loop`，当前科学主体）**：双腿管线——
-   dry 计算腿（化学=PySCF；生物=序列特征 proxy）→ Dry→Wet 晋升门 → wet 测量腿
-   （plate-reader 仿真器）→ QC/trust 裁决 → 证据聚合与 claim 裁定 → ledger 更新 →
-   knowledge 重编译 → 下一轮提案。solvent_screen / catalyst_screen 走这条，生物域
-   也走这条。
-2. **单腿材料闭环（`expos/loop.py::run_loop`，最初的基础）**：一个同步执行器
-   （crystal / coating 仿真器），带**结构化伪影注入**与三级 QC / 信任路由——这是
-   项目最早证明"测量不可信 vs 参数不可行"分类路由的地方，仍然真实、仍在用。
-
-```
-┌──── Agent Orchestrator（建议权，无裁决权）────┐
-│ 目标翻译 · 先验/理由 · QC 解释 · 动作提案      │
-│ 产出 DecisionRecord；只读视图 + 提案队列       │
-└───────────────┬───────────────────────────────┘
-                ▼ propose / explain（永不直写观测、证据与知识）
-┌──────────────────────── Kernel（域中立）────────────────────────┐
-│ objects   两 schema + DecisionRecord（七概念：candidate/obs/     │
-│           trust/evidence(claim)/knowledge/decision）             │
-│ store     追加式事件日志 + 对象存储 + 运行检查点                 │
-│ lifecycle 轮次状态机 + trust 裁决/路由                           │
-│ claims    ClaimRecord / ClaimDelta / Ledger（证据账本）          │
-│ knowledge compile_knowledge（知识 = 从账本编译的产物）          │
-└──┬────────┬─────────┬──────────┬───────────┬──────────┬─────────┘
- design/  adapters/  planner/   qc/        (dry 腿)   (wet 腿)
- 空间采样  dry+wet    晋升门+     三级检查    PySCF /    plate-reader
- 布局预算  providers  证据裁定    归因+统计   序列 proxy 仿真器
-轮次状态机：DESIGNED → EXECUTED → QC_DONE → ROUTED → CLOSED
-观测生命周期：PENDING ─QC→ TRUSTED → 证据聚合 │ SUSPECT/FAILED → 失败模型(+next_action)
-```
-
-**两条站得住的差异化主张**（见 `docs/DEEP_REVIEW.md §1`）：
-1. **方法学空白**：无任何公开基准在闭环优化对比中注入*结构化*系统偏差（空间场/漂移/
-   批次）——现有工作止步于 iid 噪声。本项目的「模拟器 + 六注入器 + naive vs OS 对比」正落此空白。
-2. **provenance 驱动的失败归因**：把「测量不可信」与「参数不可行」分类路由，直接回应
-   A-Lab 式失败链「合成失败与表征失败混为一谈、缺独立复核」之缺陷（能力已实证；"一等
-   内核服务"级封装为 V2 提案，见 `docs/ARCHITECTURE_V2_PROPOSAL.md`）。
+**Architecture hard gate (the project's core design principle).** Whether the
+primary direction is chemistry or biology, `kernel / planner / evidence-compiler /
+ledger / knowledge-compiler` must stay **domain-neutral (biology-agnostic)**. If
+onboarding biology forces a change to any of these, that proves the domain
+abstraction is not yet clean enough — that is a *finding to report honestly*, not
+something to sneak in. The entire cost of changing domain is confined to the
+domain / provider / adapter / QC layers.
 
 ---
 
-## 快速上手
+## Two loops and the core idea
 
-```bash
-# 安装（Python ≥3.11；或不装直接从仓库根目录跑，conftest.py 已使 import expos 可用）
-pip install -e .            # UI/LLM 附加：pip install -e ".[ui]" / ".[llm]"
+expos has two loop drivers:
+
+1. **Dry–Wet–Agent closed loop (`expos/mcl.py::run_mcl_loop`, the current
+   scientific core).** A two-legged pipeline: dry compute leg (chemistry = PySCF;
+   biology = sequence-feature proxy) → Dry→Wet promotion gate → wet measurement
+   leg (plate-reader simulator) → QC/trust adjudication → evidence aggregation and
+   claim decision → ledger update → knowledge recompilation → next proposal.
+   solvent_screen / catalyst_screen run on this, and the biology domain does too.
+2. **Single-leg materials loop (`expos/loop.py::run_loop`, the original
+   foundation).** One synchronous executor (crystal / coating simulator) with
+   **structured artifact injection** and three-tier QC / trust routing — this is
+   where the project first proved "measurement untrustworthy vs parameters
+   infeasible" classify-and-route; still real, still in use.
+
+```
+┌──── Agent Orchestrator (proposes; never adjudicates) ────┐
+│ goal translation · priors/rationale · QC narration       │
+│ action proposals → DecisionRecord; read-only view + queue │
+└───────────────┬──────────────────────────────────────────┘
+                ▼ propose / explain (never writes observations, evidence or knowledge)
+┌────────────────────── Kernel (domain-neutral) ──────────────────────┐
+│ objects    two schemas + DecisionRecord (seven concepts: candidate/  │
+│            obs/trust/evidence(claim)/knowledge/decision)             │
+│ store      append-only event log + object store + run checkpoint     │
+│ lifecycle  round state machine + trust routing                       │
+│ claims     ClaimRecord / ClaimDelta / Ledger (evidence ledger)       │
+│ knowledge  compile_knowledge (knowledge = compiled from the ledger)  │
+└──┬─────────┬──────────┬───────────┬────────────┬───────────┬────────┘
+ design/   adapters/   planner/    qc/          (dry leg)   (wet leg)
+ sampling  dry+wet     promotion   3-tier +     PySCF /     plate-reader
+ layout    providers   gate +      attribution  sequence    simulator
+ budget                certification +stats     proxy
+Round state machine:   DESIGNED → EXECUTED → QC_DONE → ROUTED → CLOSED
+Observation lifecycle: PENDING ─QC→ TRUSTED → evidence aggregation
+                                  │ SUSPECT/FAILED → failure model (+ next_action)
 ```
 
-### 单腿材料闭环（crystal / coating）
+Two claims we are prepared to defend (see `docs/DEEP_REVIEW.md §1`):
+1. **A methodological gap.** No public benchmark injects *structured* systematic
+   bias (spatial fields, drift, batch effects) into a closed-loop optimization
+   comparison — prior work stops at iid noise. Our "simulator + six artifact
+   injectors + naive-vs-OS comparison" lands squarely in that gap.
+2. **Provenance-driven failure attribution.** Where A-Lab–style pipelines conflate
+   synthesis failure with characterization failure on one decision chain, expos
+   classifies and routes "measurement is untrustworthy" apart from "parameters are
+   infeasible" (the capability is demonstrated; the "first-class kernel service"
+   packaging is a V2 proposal, see `docs/ARCHITECTURE_V2_PROPOSAL.md`).
+
+---
+
+## Quick start
 
 ```bash
-# 跑闭环——五臂全通（对照组 → 完整 OS），换臂只换 --mode
+# Install (Python >=3.11; or run straight from the repo root — conftest.py makes
+# `import expos` work without installing).
+pip install -e .            # for UI/LLM: pip install -e ".[ui]" / ".[llm]"
+```
+
+### Single-leg materials loop (crystal / coating)
+
+```bash
+# Run the closed loop — all five arms wired (strawman control → full OS); swap arm via --mode
 python scripts/run_loop.py --domain crystal --mode os --rounds 6 --seed 7 --out runs/demo
-#   --mode ∈ {naive, robust, rcgp, os, os-soft, compare}；断点续跑追加 --resume
-#     naive    全信基线（稻草人对照）
-#     robust   信任盲 + 副本中位数聚合（路由层之外的稳健对照）
-#     rcgp     模型层稳健（RobustResponseModel：Plateau-IMQ 后验软剪裁离群）
-#     os       三级 QC + 信任路由（完整 OS）
-#     os-soft  os + 隔离观测软降权（软信任对照，除聚合外与 os 全同）
-#     compare  转发 expos.eval.compare，三臂编排出主图
+#   --mode in {naive, robust, rcgp, os, os-soft, compare}; resume with --resume
+#     naive    trust-everything baseline (strawman control)
+#     robust   trust-blind + replicate-median aggregation (robustness outside routing)
+#     rcgp     model-layer robustness (RobustResponseModel: Plateau-IMQ posterior soft-trimming)
+#     os       three-tier QC + trust routing (the full OS)
+#     os-soft  os + soft-downweight of quarantined observations (soft-trust control)
+#     compare  forwards to expos.eval.compare for three-arm orchestration + headline plot
 ```
 
-### Dry–Wet–Agent 闭环（solvent / catalyst；生物域执行面同径）
+### Dry–Wet–Agent loop (solvent / catalyst; biology domain uses the same path)
 
-MCL 双腿闭环目前作为 Python API 暴露（`expos.mcl.run_mcl_loop`）：
+The two-legged MCL loop is currently exposed as a Python API
+(`expos.mcl.run_mcl_loop`):
 
 ```python
 from expos.mcl import run_mcl_loop
 
-# 化学：solvent screening，两轮，默认模板 agent（LLM 为可选插件位）
+# Chemistry: solvent screening, two rounds, default template agent (LLM is an optional plugin slot)
 summary = run_mcl_loop(
     "domains/solvent_screen.yaml", rounds=2, seed=7, out_dir="runs/solvent_demo",
 )
-# catalyst_screen.yaml 同径——同一 kernel/loop 字节不动换域（M20 换域存在性证明）。
+# catalyst_screen.yaml uses the same path — same kernel/loop, byte-unchanged domain swap
+# (the M20 domain-swap existence proof).
 ```
 
-一轮的数据流：`compile_knowledge → agent 提案 → dry 腿 → 晋升门 →
-wet 腿 → QC/trust 裁决 → certification 证据裁定 → apply_claim_deltas → 下一轮`。
-证据自动产生 claim，claim 改写 knowledge 指纹，knowledge 改变下一轮候选——这条
-"数据自推导改写知识"的因果链是化学域已实证的核心（生物域执行面已就位，闭环为 M24-B）。
+Per-round data flow: `compile_knowledge → agent proposal → dry leg → promotion
+gate → wet leg → QC/trust adjudication → certification decision →
+apply_claim_deltas → next round`. Evidence produces a claim automatically, the
+claim rewrites the knowledge fingerprint, and the knowledge changes the next
+round's candidates — this "data self-derives new knowledge" causal chain is the
+core demonstrated in the chemistry domains (the biology execution surface is in
+place; the biology loop is M24-B).
 
-### CLI v2 与评测
+### CLI v2 and evaluation
 
 ```bash
-# runs/ 只读查询器 + override 投递端（装包后 expos 入口 ≡ python3 -m expos.cli）
-expos status   runs/demo                          # 一屏运行态
-expos verdicts runs/demo --trust suspect          # 裁决清单表（可按信任级过滤）
-expos inspect  runs/demo obs <obs_id>             # 对象与事件查询（what ∈ events/obs/exp）
-expos override runs/demo --obs <id> --trust trusted --reason "…"  # 人工改判（留审计事件，不触碰 store）
-expos domains  validate domains/solvent_screen.yaml  # 域配置前置校验
-expos ui       --runs-root runs                   # 拉起只读 Streamlit 面板（需 .[ui]）
+# read-only query surface over runs/ + override drop box (after install, `expos` ≡ python3 -m expos.cli)
+expos status   runs/demo                          # one-screen run state
+expos verdicts runs/demo --trust suspect          # verdict table (filter by trust level)
+expos inspect  runs/demo obs <obs_id>             # object & event query (what in events/obs/exp)
+expos override runs/demo --obs <id> --trust trusted --reason "…"  # human override (audit event; never touches the store)
+expos domains  validate domains/solvent_screen.yaml  # domain-config preflight
+expos ui       --runs-root runs                   # read-only Streamlit panel (needs .[ui])
 
-# 三幕 demo 一键；剧本见 docs/DEMO_SCRIPT.md
+# One-command three-act demo; script narrative in docs/DEMO_SCRIPT.md
 python scripts/make_demo.py --out runs/demo
 
-# M9 三臂对比评测（幂等格子——重跑不重算已完成 campaign）
+# M9 three-arm comparison (idempotent cells — completed campaigns are never recomputed)
 python -m expos.eval.compare --domain domains/crystal.yaml --scenario S0.demo \
     --seeds 1,2,3 --rounds 8 --out-root runs/m9 --arms naive,robust,os
 
-# 门 12 决策链验收（三层验收 + 决策链差分）
+# Gate-12 decision-chain verification (three-tier + decision-chain diff)
 python scripts/verify_run_chain.py runs/<name>
 
-# 跑测试
+# Run the tests
 pytest -q
 ```
 
-运行产物目录（`runs/<name>/`，已 gitignore）：
+Run artifacts (`runs/<name>/`, gitignored):
 
 ```
 runs/demo/
-├── config.json          # 域配置快照 + 模式 + 种子（可复现）
-├── events.jsonl         # 追加式事件日志：状态迁移/裁决/改判/claim 裁定/决策
-├── checkpoint.json      # 运行检查点（当前轮次/预算/账本快照）→ 断点续跑
+├── config.json          # domain config snapshot + mode + seed (reproducible)
+├── events.jsonl         # append-only event log: transitions/verdicts/reroutes/claim decisions
+├── checkpoint.json      # run checkpoint (current round / budget / ledger snapshot) → resume
 ├── experiments/         # exp_r<k>.json
 ├── observations/        # obs_*.json
-├── truth/               # 仿真真值 sidecar（OS 不可读，仅评分脚本用）
-├── models/              # 响应模型训练集指纹
-└── report/              # 对比图 + summary.json（M9 起）
+├── truth/               # simulator ground-truth sidecar (OS cannot read it; scoring only)
+├── models/              # response-model training-set fingerprints
+└── report/              # comparison plots + summary.json (from M9)
 ```
 
-**试点数字（S0.demo · crystal，单腿材料闭环）**：第 3 轮边缘蒸发把某平庸边缘孔读数抬成
-全场最高——扫描中 **naive 假最优命中率 1.00 vs os 0.20**；**os** 三级 QC 判 SUSPECT
-复测证伪。全量扫描（**1450 格＝标定集 A 450 + 评估集 B 1000**，五臂）主数字为极显著的
-可信性指标：假最优拒斥（配对置换**精确 p≈3.1e-5**）、训练集污染率 os **0.004** vs
-naive **0.146**（配对置换**精确 p≈1.9e-6**），两数字重算溯源见
-`runs/full_sweep/report/headline_stats.json`。**regret 老实标注为不显著/场景依赖**
-（os vs naive 主口径 p=0.0668，且在多数结构性场景劣于 robust 基线）——os 的优势在污染
-防护与假最优拒斥，详见论文骨架 `docs/PAPER_OUTLINE.md` 的解耦讨论。
+**Pilot numbers (S0.demo · crystal, single-leg materials loop).** In round 3 an
+edge-evaporation injector lifts a mediocre edge well to the highest reading on the
+plate — across the seed sweep the **fake-optimum hit rate is naive 1.00 vs os
+0.20**; **os**'s three-tier QC flags it SUSPECT and refutes it on re-measurement.
+Full sweep (**1,450 cells = calibration set A 450 + evaluation set B 1,000**, five
+arms) headline numbers are highly significant credibility indicators:
+fake-optimum rejection (paired permutation **exact p≈3.1e-5**) and training-set
+contamination os **0.004** vs naive **0.146** (paired permutation **exact
+p≈1.9e-6**), both recomputed in `runs/full_sweep/report/headline_stats.json`.
+**Regret is honestly flagged as not significant / scenario-dependent** (os-vs-naive
+p=0.0668, and it trails the robust baseline on most structured-bias scenarios) —
+os's edge is in contamination protection and fake-optimum rejection; see the
+decoupled discussion in the paper outline (`docs/PAPER_OUTLINE.md`).
 
 ---
 
-## 仓库结构
+## Repository layout
 
 ```
 dry_wet_agent_os/
 ├── README.md  README_EN.md  CHECKPOINTS.md  CHANGELOG.md  pyproject.toml  conftest.py
 ├── docs/
-│   ├── ARCHITECTURE.md            权威蓝图（公理/域/schema/各层规格）
-│   ├── ROADMAP_BIOLOGY_PRIMARY.md 生物成为主研究方向的权威路线图（2026-07-14 裁决）
-│   ├── M24_CELL_FREE_EXPRESSION.md / M24_CONTRACT_V3.md / M24_REPO_MAP.md  生物域章程与接缝地图
-│   ├── BUILD_PLAN.md              里程碑定义与验收标准
-│   ├── DEEP_REVIEW.md             有效性审视（两条主张 + 三大威胁）
-│   └── REFERENCE_MAP.md / PAPER_OUTLINE.md / MCP_SURFACE.md …  调研库/论文骨架/审计面
+│   ├── ARCHITECTURE.md            authoritative blueprint (axioms/domains/schemas/layer specs)
+│   ├── ROADMAP_BIOLOGY_PRIMARY.md authoritative roadmap for biology-as-primary (2026-07-14 ruling)
+│   ├── M24_CELL_FREE_EXPRESSION.md / M24_CONTRACT_V3.md / M24_REPO_MAP.md  biology-domain charter & seam map
+│   ├── BUILD_PLAN.md              milestone definitions and acceptance criteria
+│   ├── DEEP_REVIEW.md             validity review (two claims + three threats)
+│   └── REFERENCE_MAP.md / PAPER_OUTLINE.md / MCP_SURFACE.md …  survey / paper outline / audit surface
 ├── expos/
-│   ├── kernel/{objects,store,lifecycle,claims,knowledge,overrides}.py  # 域中立内核：两对象+事件日志+trust 路由+证据账本+知识编译
+│   ├── kernel/{objects,store,lifecycle,claims,knowledge,overrides}.py  # domain-neutral kernel: two objects + event log + trust routing + evidence ledger + knowledge compile
 │   ├── design/{space,sampler,layout,budget}.py
-│   ├── planner/{promotion,certification,arbiter,stages,policy}.py       # 晋升门 + 证据裁定 + 失败感知规划（纯函数红线）
+│   ├── planner/{promotion,certification,arbiter,stages,policy}.py       # promotion gate + evidence decision + failure-aware planning (pure-function red line)
 │   ├── qc/{checks,attribution,failure_model,certification_stats,replicate_collapse,stats,policy}.py
-│   ├── adapters/dry/{adapter,compute,catalysts,solvents,constructs,sequence_adapter,sequences,ingest,worker}.py  # dry 腿：PySCF（化学）+ 序列特征 proxy（生物）
-│   ├── adapters/wet/{screen,sim_reader,bio_readout,action_ledger,recovery,differential_gate,orchestration,…}.py  # wet 腿：plate-reader 仿真器 + 真机就绪事务面
-│   ├── adapters/providers/{solvent_screen,catalyst_screen,cell_free_expression_screen}.py  # 域 provider（含生物）
+│   ├── adapters/dry/{adapter,compute,catalysts,solvents,constructs,sequence_adapter,sequences,ingest,worker}.py  # dry leg: PySCF (chemistry) + sequence-feature proxy (biology)
+│   ├── adapters/wet/{screen,sim_reader,bio_readout,action_ledger,recovery,differential_gate,orchestration,…}.py  # wet leg: plate-reader simulator + real-wet readiness transaction surface
+│   ├── adapters/providers/{solvent_screen,catalyst_screen,cell_free_expression_screen}.py  # domain providers (incl. biology)
 │   ├── adapters/{base,sim_base,sim_crystal,sim_coating,domain_provider,bench_manual,artifacts,content_store}.py
-│   ├── models/{response_gp,robust_gp}.py   # 响应 GP（trusted）+ RCGP 稳健 GP
+│   ├── models/{response_gp,robust_gp}.py   # response GP (trusted) + RCGP robust GP
 │   ├── cli.py                              # CLI v2
-│   ├── mcl.py                              # Dry–Wet–Agent 双腿闭环（run_mcl_loop）
-│   └── domain.py  loop.py                  # 域装配 + 单腿材料闭环
-├── expos_mcp/                              # FastMCP 只读审计面（expos-audit skill）
-├── domains/{crystal,coating,solvent_screen,solvent_screen_flipped,catalyst_screen}.yaml  # 换域 = 换配置
+│   ├── mcl.py                              # Dry–Wet–Agent two-legged loop (run_mcl_loop)
+│   └── domain.py  loop.py                  # domain assembly + single-leg materials loop
+├── expos_mcp/                              # FastMCP read-only audit surface (expos-audit skill)
+├── domains/{crystal,coating,solvent_screen,solvent_screen_flipped,catalyst_screen}.yaml  # change domain = change config
 ├── scripts/{run_loop,make_demo,verify_run_chain,gen_sweep,expos_report,…}.py
 ├── tests/                                 # kernel/design/adapters/qc/planner/mcl/e2e …
-└── runs/                                  # 运行产物（gitignore）
+└── runs/                                  # run artifacts (gitignored)
 ```
 
-（`CHECKPOINTS.md` = 构建台账，逐里程碑记状态/验证/偏离；`CHANGELOG.md` 记版本变更。）
+(`CHECKPOINTS.md` = build ledger with per-milestone status/verification/deviations;
+`CHANGELOG.md` tracks releases.)
 
 ---
 
-## 里程碑状态
+## Milestone status
 
-| # | 里程碑 | 状态 |
+| # | Milestone | Status |
 |---|---|---|
-| M0–M10 | 单腿材料 OS：kernel / design / adapters / QC 三级 / 归因+失败模型 / 失败感知规划 / agent 层 / naive-robust-os 三臂评测 / CLI v2 + UI | ✅ done |
-| M16 | Executable Minimum Dry–Wet–Agent Control Loop（solvent_screen，simulated-wet） | ✅ done（双签） |
-| M17+M18 | Evidence-to-Claim Compiler + 知识反馈闭环 → 定名 **Adaptive Dry–Wet–Agent Scientific Loop**；LLM 三阶段过（默认仍模板） | ✅ done（双签） |
-| M20 | 换域存在性证明（catalyst_screen，同 kernel 字节不动跑通全环，门 12 COMPLETE） | ✅ done（双签） |
-| M21–M22 | 域契约 v2 + provider 五 hook + 溯源补全 + 性质测试文化 | ✅ done（双签） |
-| M23 | Real-Wet Readiness Contract（真机就绪事务面，对假物理后端；真硬件 pending） | ✅ done（双签） |
-| **M24-A** | **生物执行面：Domain Contract v3（compute_targets/ComputeTarget）+ 序列 dry proxy + 三真值面** | **✅ 就位** |
-| **M24-B** | **自适应生物闭环（sequence → phenotype → knowledge → 重设计）** | **🔜 next，尚未跑出结果** |
-| M25+ | 生成式序列优化 / 蛋白·酶活 / 细胞响应闭环 → 真正的 Biological Research OS | ⏳ 规划中 |
+| M0–M10 | Single-leg materials OS: kernel / design / adapters / 3-tier QC / attribution+failure model / failure-aware planner / agent layer / naive-robust-os three-arm eval / CLI v2 + UI | ✅ done |
+| M16 | Executable Minimum Dry–Wet–Agent Control Loop (solvent_screen, simulated-wet) | ✅ done (countersigned) |
+| M17+M18 | Evidence-to-Claim Compiler + knowledge feedback loop → named **Adaptive Dry–Wet–Agent Scientific Loop**; LLM three stages passed (default still template) | ✅ done (countersigned) |
+| M20 | Domain-swap existence proof (catalyst_screen, same kernel byte-unchanged, gate-12 COMPLETE) | ✅ done (countersigned) |
+| M21–M22 | Domain contract v2 + provider five-hook + provenance completion + property-testing culture | ✅ done (countersigned) |
+| M23 | Real-Wet Readiness Contract (real-wet transaction surface, against fake physical backend; real hardware pending) | ✅ done (countersigned) |
+| **M24-A** | **Biology execution surface: Domain Contract v3 (compute_targets/ComputeTarget) + sequence dry proxies + three truth faces** | **✅ in place** |
+| **M24-B** | **Adaptive biological closed loop (sequence → phenotype → knowledge → redesign)** | **🔜 next, not yet run** |
+| M25+ | Generative sequence optimization / protein·enzyme assay / cellular-response loop → a true Biological Research OS | ⏳ planned |
 
-> 权威里程碑台账见 `CHECKPOINTS.md`（含验证命令与偏离记录）；生物主线路线图见
-> `docs/ROADMAP_BIOLOGY_PRIMARY.md`。
-
----
-
-## 设计红线
-
-- **域中立硬门**：`kernel / planner / evidence-compiler / ledger / knowledge-compiler`
-  语义域中立（生物盲）；一切化学/生物语义住在 domain/provider/adapter/QC 层。若接新域
-  必须改这些内核文件，作为 abstraction 发现如实上报，不得偷改。
-- **真值隔离**：仿真真值只由 `adapters/sim_*` / reader 服务端写入 `truth/` sidecar；
-  `qc/models/planner/agent` 一律禁读，`loop.py` 只做不透明透传。这是「系统没被伪影
-  骗到」可定量证明的前提。
-- **Agent 无裁决权**：Agent 只拿只读视图 + 提案队列，一切产出为 DecisionRecord，须经
-  planner/kernel 校验才生效；无观测/证据/知识写句柄（守门测试机器验证）。
-- **证据不可变 + 写严读容**：证据是追加式哈希链，schema 演进走验证语义而非数据迁移
-  （ADDITIVE_SINCE 注册表）；任何进度都必须可恢复、可审计。
-- **无静默降级**：约束缺失变量、预算超支、越界参数、缺单位等一律**响亮失败**（干净领域
-  异常），绝不静默判真或降级。
+> The authoritative milestone ledger is `CHECKPOINTS.md` (verification commands +
+> deviations); the biology roadmap is `docs/ROADMAP_BIOLOGY_PRIMARY.md`.
 
 ---
 
-## 安全与执行方式声明
+## Design red lines
 
-当前执行器以**带结构化伪影注入的仿真器为主**（可控真值 → 可定量对比 naive vs OS）；
-`BenchAdapter` 提供协议同构的真实台面路径（人类可读 worklist + CSV/图像回灌），真机
-就绪事务面（M23）针对**假物理后端**验证——**真实硬件与真实 wet-lab 验证仍 pending**。
-化学域使用常见食品级/教学级安全盐类（明矾/硝酸钾）水溶液蒸发结晶等；生物域当前限于
-**in-silico 序列 proxy 与仿真读板**，无真实湿实验、无活体材料操作。
+- **Domain-neutrality hard gate.** `kernel / planner / evidence-compiler / ledger /
+  knowledge-compiler` are domain-neutral (biology-agnostic); all chemistry/biology
+  semantics live in the domain/provider/adapter/QC layers. If a new domain forces a
+  change to these kernel files, report it as an abstraction finding — never sneak it in.
+- **Ground-truth isolation.** Simulator truth is written only by `adapters/sim_*` /
+  the reader server into the `truth/` sidecar; `qc/models/planner/agent` may never
+  read it, and `loop.py` only passes it through opaquely. This is the precondition
+  for *quantitatively proving* the system was not fooled by artifacts.
+- **The agent cannot adjudicate.** The agent gets only a read-only view and a
+  proposal queue; every output is a DecisionRecord validated by planner/kernel
+  before it takes effect. It holds no write handle to observations, evidence or
+  knowledge (enforced by gatekeeper tests).
+- **Immutable evidence + write-strict/read-lenient.** Evidence is an append-only
+  hash chain; schema evolution goes through validation semantics, not data
+  migration (the ADDITIVE_SINCE registry). All progress must be recoverable and
+  auditable.
+- **No silent degradation.** Missing constraint variables, budget overruns,
+  out-of-range parameters, missing units — all fail loudly with clean domain
+  exceptions, never silently pass or degrade.
 
 ---
 
-## 文档与贡献
+## Safety & execution-mode statement
 
-- **文档站**（MkDocs Material，`mkdocs.yml`）：`python3 -m mkdocs serve` 本地预览；
-  权威蓝图 `docs/ARCHITECTURE.md`、生物主线路线图 `docs/ROADMAP_BIOLOGY_PRIMARY.md`、
-  论文骨架 `docs/PAPER_OUTLINE.md`、三幕剧本 `docs/DEMO_SCRIPT.md`、审计面
-  `docs/MCP_SURFACE.md`。
-- **只读审计**：`expos_mcp/` 提供 FastMCP 审计面（七只读工具，含门 12 验收 verify_gate12
-  / diff_runs）；配套 `expos-audit` skill。
-- **贡献指南**：见 [CONTRIBUTING.md](CONTRIBUTING.md)——含策略注入点开发约定、红线清单
-  与对抗测试要求；工程规范见 `docs/ENGINEERING.md`。
+The primary actuator is a **simulator with structured artifact injection**
+(controlled ground truth → quantitative naive-vs-OS comparison); `BenchAdapter`
+provides a protocol-isomorphic real-bench path (human-readable worklists +
+CSV/image ingestion), and the real-wet readiness transaction surface (M23) is
+validated **against a fake physical backend** — **real hardware and real wet-lab
+validation are still pending.** The chemistry domains use common
+food-/education-grade safe salts (alum, potassium nitrate) in aqueous
+evaporation-crystallization etc.; the biology domain is currently confined to
+**in-silico sequence proxies and simulated plate reads** — no real wet experiments,
+no live-material handling.
+
+---
+
+## Docs & contributing
+
+- **Docs site** (MkDocs Material, `mkdocs.yml`): `python3 -m mkdocs serve` to
+  preview locally. Authoritative blueprint `docs/ARCHITECTURE.md`, biology roadmap
+  `docs/ROADMAP_BIOLOGY_PRIMARY.md`, paper outline `docs/PAPER_OUTLINE.md`, demo
+  script `docs/DEMO_SCRIPT.md`, audit surface `docs/MCP_SURFACE.md`.
+- **Read-only audit:** `expos_mcp/` provides a FastMCP audit surface (seven
+  read-only tools, incl. gate-12 verify_gate12 / diff_runs); paired with the
+  `expos-audit` skill.
+- **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md) — policy-injection-point
+  conventions, red lines, and adversarial-test requirements; engineering norms in
+  `docs/ENGINEERING.md`.
+```

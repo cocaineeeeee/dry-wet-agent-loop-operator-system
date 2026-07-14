@@ -359,10 +359,34 @@ def test_signature_weights_no_phantom_aux():
 
 
 def test_dependency_and_truth_isolation():
+    """Dependency + truth-isolation red line at IDENTIFIER/IMPORT level, not raw
+    substring: a lint COMMENT mentioning ``adapters/sim_base.py`` (the batch-
+    formula cross-reference) is documentation, not a layering violation (letter
+    146: the blanket substring false-flagged that comment). Mirrors the EXP001 /
+    test_adapters AST discipline."""
+    import ast as _ast
     import expos.qc.attribution as mod
     src = Path(mod.__file__).read_text(encoding="utf-8")
-    for forbidden in ("adapters", "expos.agent", "planner", "truth"):
-        assert forbidden not in src, f"attribution.py 不得涉及 {forbidden!r}（依赖/真值红线）"
+    tree = _ast.parse(src, filename=mod.__file__)
+    # (1) module-dependency red line: no import of adapters / agent / planner.
+    forbidden_mods = ("expos.adapters", "adapters", "expos.agent", "expos.planner", "planner")
+    imported: list[str] = []
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.ImportFrom) and node.module:
+            imported.append(node.module)
+        elif isinstance(node, _ast.Import):
+            imported.extend(a.name for a in node.names)
+    hits = [f for f in forbidden_mods for m in imported if m == f or m.startswith(f + ".")]
+    assert hits == [], f"attribution.py import 了禁区模块: {sorted(set(hits))}"
+    # (2) truth-isolation: no `truth` IDENTIFIER (docstrings/comments exempt — the
+    # AST carries no comment text). Same identifier-level semantics as EXP001.
+    truth_idents = [
+        n for n in _ast.walk(tree)
+        if (isinstance(n, _ast.Name) and "truth" in n.id.lower())
+        or (isinstance(n, _ast.Attribute) and "truth" in n.attr.lower())
+        or (isinstance(n, _ast.arg) and "truth" in n.arg.lower())
+    ]
+    assert truth_idents == [], "attribution.py 不得含 truth 标识符（真值隔离红线）"
 
 
 def test_board_frame_batch_matches_simulator_labels():
