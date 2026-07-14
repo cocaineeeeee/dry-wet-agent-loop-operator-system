@@ -119,6 +119,31 @@ sentinel:
   params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}
   expected_band: [0.6, 1.05]
 
+# ---- M24-B assay controls (bio ruling ①; DomainConfig.controls / ControlSpec, landed by
+# session B). Declaring this trio ACTIVATES the percent-of-control readout normalization
+# (adapters/wet/bio_readout.py) that mcl inserts between the wet reader and QC (item #4):
+# with a negative+positive pair on the plate every well is re-expressed as a percent of the
+# positive reference above the no-template background, and the normalized readings are QC'd
+# against the (0, 200) percent range (mcl `_NORMALIZED_METRIC_RANGE`) instead of the raw a.u.
+# `metric_range`. Absent this block the readout stays raw (byte-identical chemistry plate).
+#   * negative -> kernel Control(kind=negative). The sim reader realises fluorescence from the
+#     construct DESIGN COORDINATE; there is no literal "no-DNA" coordinate, so the WEAKEST-design
+#     construct (j23103, the ~0.01 relative-strength Anderson promoter) is the honest no-template /
+#     background proxy: its realised coordinate (~0.30) collapses the expression Gaussian to the
+#     lysate baseline (~0.05 a.u.), exactly the background a no-template well would read.
+#   * positive -> kernel Control(kind=positive). J23100 (coord 1.0, the strong-design reference
+#     near the expression_high optimum) reads ~0.85 a.u., setting the top of the percent scale.
+#   * reference -> rides kind=sentinel + params.semantic_role="reference" (mcl marks it; ruling ①
+#     avoids a new kernel Control.kind and the to_unit design-point rejection). A calibration
+#     drift sentinel, NOT part of the percent-of-control pair.
+controls:
+  - {control_id: neg_no_template, role: negative,
+     params: {construct: j23103, incubation_time: 120.0, temperature: 30.0}}
+  - {control_id: pos_strong_ref, role: positive,
+     params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}}
+  - {control_id: ref_calibration, role: reference,
+     params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}}
+
 metric_range: [0.0, 1.2]   # wet `expression_fluorescence` RAW reader range (a.u.)
 
 # No expos artifact injectors: wet artefacts (plate_offset, calibration_drift, dropout)
@@ -140,6 +165,24 @@ metrics: [expression_fluorescence, expression_proxy]
 metric_units:
   expression_fluorescence: arbitrary_unit
   expression_proxy: dimensionless
+
+# ---- M24-B seed claims (M20 seed-claim neutralization; DomainConfig.seed_claims /
+# SeedClaimSpec). Declaring this block makes the run's seed claim ledger AND its posed
+# hypotheses THIS biological family (mcl `_domain_seed_claims` / `_domain_hypotheses`),
+# instead of the built-in `c_polar` polar fallback -- so the loop carries the biological
+# knowledge face and its direction closes the sequence->phenotype->claim->knowledge->
+# proposal loop (judgement C). Transcribed VERBATIM from the provider's `seed_claims()`
+# (`_SEED_CLAIMS` in adapters/providers/cell_free_expression_screen.py): the b_strongdesign
+# family, the biological analogue of the catalyst c_highcoord family.
+#   * b_strongdesign_expresses_higher -> supported/higher, matches the `expression_high`
+#     positive-sign face (strong-design constructs express highest; prefer HIGH design coord).
+#   * b_weakdesign_expresses_higher   -> rejected/lower, its refuted mirror, matches the
+#     `expression_flipped` face.
+seed_claims:
+  - {claim_id: b_strongdesign_expresses_higher, status: supported, direction: higher,
+     statement: "strong-design constructs give a higher plate-reader fluorescence"}
+  - {claim_id: b_weakdesign_expresses_higher, status: rejected, direction: lower,
+     statement: "weak-design constructs give a higher plate-reader fluorescence"}
 
 # Dispatch kind: dual-leg, driven by `--loop mcl` (build_adapter never called for the dry
 # leg -- the out-of-band guard, same class as catalyst_screen's dry_compute leg).

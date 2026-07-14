@@ -67,11 +67,23 @@ _E = float(np.e)
 # ---- 阈值与校准常数（§11.4 / §14；显著性门限统一 3σ 以控 FPR，见模块 docstring）----
 METRIC_RANGE_DEFAULT = (0.0, 1.2)
 EXPOSURE_LO, EXPOSURE_HI = 0.3, 2.0        # 曝光/照度物理有效带（越界即 hard 失败）
-# 边缘/批次用绝对阈（§14 定标于本域 noise_sd=0.02）：稀疏板上 robust 尺度会被伪影本身
-# 污染（edge 命中多数填充孔），故实证标定绝对地板 + 满分点，_ramp 分在阈附近≈0 天然控 FPR。
-# 实测（30 种子）：edge 统计量(d==0 vs d≥1) clean std≈0.008、edge strength0.5≈0.047；
-# batch 组均值差 clean std≈0.010、shift−0.18≈0.033。
-EDGE_FIRE, EDGE_FULL = 0.018, 0.045
+# Edge floor — SCALE-AWARE (M24-B abstraction fix, letter 147). §14 gives ABSOLUTE floors on
+# the edge paired-diff statistic (edge>0.011 family), empirically retuned here to
+# FIRE/FULL = 0.018/0.045 for this domain's noise_sd=0.02: on a sparse board the robust scale is
+# polluted by the artifact itself (edge hits most filled wells), so we use an empirical absolute
+# floor + full-score point, and _ramp keeps the score ~0 near the floor to control FPR. Measured
+# (30 seeds): edge statistic (d==0 vs d>=1) clean std~0.008, edge strength0.5~0.047.
+#   THE LEAK (letter 147 §2): 0.018/0.045 are in RAW METRIC UNITS, implicitly calibrated to the
+# chemistry measurement scale (metric_range span ~1.2 a.u., noise_sd~0.02). A domain that
+# normalizes readouts to a DIFFERENT scale (biology percent-of-control, span 200) sees the same
+# spatial noise amplified ~167x, so this absolute floor mis-fires (0.045 > 0.018 -> score 1.0),
+# collapsing certification power. FIX: express the floor as a FRACTION of the metric span so it
+# tracks the measurement scale (domain-neutral). The fraction is DERIVED from the chemistry
+# calibration itself (_EDGE_REFERENCE_SPAN below), so at the reference span the effective floor
+# equals the historical absolute value EXACTLY (byte-identical chemistry); at span 200 it scales
+# up ~167x. The effective edge_fire/edge_full are derived from metric_range inside run_qc.
+_EDGE_REFERENCE_SPAN = 1.2                    # chemistry metric_range span the §14 floors were calibrated on
+EDGE_FIRE, EDGE_FULL = 0.018, 0.045          # effective floors AT the reference span (§14 grandfathered magnitudes)
 # 批次位移：**身份无关**的乘性斜率估计量 shift_hat（见 batch 检查处的结构性教训注释）。
 # M6 把批次改成空间棋盘格 (row+col)%n 后，旧的"去身份残差逐批组均值差"路径被结构性削弱
 # ——同一候选的副本若同奇偶落同批，批次位移被候选去身份均值吸收；棋盘格下 straddle 率仅约
@@ -379,6 +391,21 @@ def run_qc(
         raise CheckError(f"exp {exp.exp_id} 无 layout，无法 QC")
     rows, cols = exp.layout.rows, exp.layout.cols
 
+    # ---- Scale-aware edge floor (M24-B, letter 147) ----
+    # Express the §14 absolute edge floor as a fraction of the measurement span so it tracks the
+    # readout scale (domain-neutral). At the chemistry reference span (1.2) the factor is exactly
+    # 1.0 -> effective floor == the historical 0.018/0.045 (byte-identical); a normalized readout
+    # on a wider span (bio percent-of-control, span 200) scales the floor up proportionally so
+    # drift-amplified spatial noise no longer mis-fires, while a genuinely large edge artifact at
+    # that scale still trips it. All the OTHER structural checks (batch shift_hat = multiplicative
+    # slope, row/col gradient t-stat, drift/replicate z-scores, Moran) are already dimensionless
+    # and thus scale-invariant; edge is the sole absolute-metric-scale floor.
+    lo_m, hi_m = metric_range
+    metric_span = float(hi_m) - float(lo_m)
+    _edge_scale = metric_span / _EDGE_REFERENCE_SPAN if metric_span > 0 else 1.0
+    edge_fire = EDGE_FIRE * _edge_scale
+    edge_full = EDGE_FULL * _edge_scale
+
     # ---- 布局与观测映射 ----
     well_pos: dict[str, tuple[int, int]] = {}
     d_edge: dict[str, int] = {}
@@ -456,17 +483,21 @@ def run_qc(
     # ---- 边缘配对（去身份残差：最外圈 d==0 vs 内部 d≥1，实证最优对比）----
     edge_scores: dict[str, float] = {}
     edge_paired_diff = 0.0
-    edge_ev: dict[str, Any] = {"fire": EDGE_FIRE, "full": EDGE_FULL, "fired": False}
+    # `fire`/`full` are the SCALE-AWARE effective floors (span-scaled from the §14 magnitudes);
+    # `metric_span` + `fire_frac` are recorded for audit of the scale derivation.
+    edge_ev: dict[str, Any] = {"fire": edge_fire, "full": edge_full, "fired": False,
+                               "fire_frac": EDGE_FIRE / _EDGE_REFERENCE_SPAN,
+                               "metric_span": metric_span}
     try:
         e_vals = np.array([resid_raw[w] for w in resid_raw if d_edge[w] == 0])  # lint: allow-domain-literal(P4 legacy: crystal plate edge-band width hardcode, grandfathered pending Domain Profile extraction (Q3))
         c_vals = np.array([resid_raw[w] for w in resid_raw if d_edge[w] >= 1])  # lint: allow-domain-literal(M5 legacy: edge-effect radius (d_edge<=1) is a crystal board-domain assumption, grandfathered pending Domain Profile extraction (Q3))
         if e_vals.size >= 1 and c_vals.size >= 2:
             edge_paired_diff = float(e_vals.mean() - c_vals.mean())
-            fired = abs(edge_paired_diff) > EDGE_FIRE
+            fired = abs(edge_paired_diff) > edge_fire
             edge_ev.update({"diff": edge_paired_diff, "fired": bool(fired),
                             "n_edge": int(e_vals.size), "n_inner": int(c_vals.size)})
             if fired:
-                s = _ramp(abs(edge_paired_diff), EDGE_FIRE, EDGE_FULL)
+                s = _ramp(abs(edge_paired_diff), edge_fire, edge_full)
                 for w in resid_raw:                # 牵连 d≤1（边缘蒸发注入器足迹）全部孔
                     if d_edge[w] <= 1:  # lint: allow-domain-literal(M5 legacy: edge-effect radius (d_edge<=1) is a crystal board-domain assumption, grandfathered pending Domain Profile extraction (Q3))
                         edge_scores[w] = s
@@ -781,7 +812,7 @@ def run_qc(
 
     # ============================================================ 逐观测聚合
     reports: dict[str, QCReport] = {}
-    lo_m, hi_m = metric_range
+    # lo_m, hi_m already unpacked from metric_range at the top of run_qc (scale-aware edge floor).
 
     # 单观测聚合体：任何逐检查异常已在各检查块内转 error-evidence；此处再包一层
     # per-observation 兜底，保证任一观测的意外崩溃不拖垮整轮 QC（见下方 guarded loop）。

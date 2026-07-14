@@ -81,7 +81,7 @@ CAUSES = (
     "edge_evaporation",
     "thermal_gradient",
     "glare",  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
-    "glare",  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
+    "dust_contamination",  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
     "batch_effect",
     "instrument_drift",
 )
@@ -91,6 +91,7 @@ _REMEDY: dict[str, tuple[ActionType, str, dict[str, Any]]] = {
     "edge_evaporation": (ActionType.DISAMBIGUATION_REPEAT, "detour", {"placement_hint": "center_only"}),
     "thermal_gradient": (ActionType.ADD_CONTROLS, "addition", {}),
     "glare": (ActionType.REMEASURE, "detour", {"recapture": True}),  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
+    "dust_contamination": (ActionType.REPEAT_CANDIDATE, "addition", {}),  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
     "batch_effect": (ActionType.REPEAT_CANDIDATE, "addition", {"cross_batch": True}),
     "instrument_drift": (ActionType.REMEASURE, "detour", {"calibrate_flag": True}),
 }
