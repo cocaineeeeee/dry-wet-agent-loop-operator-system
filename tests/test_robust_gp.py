@@ -24,7 +24,6 @@ from expos.kernel.objects import (
     TrustLevel,
     VariableDef,
 )
-from expos.models.response_gp import ResponseModel
 from expos.models.robust_gp import RobustGPError, RobustResponseModel
 
 ROOT = Path(__file__).resolve().parent.parent

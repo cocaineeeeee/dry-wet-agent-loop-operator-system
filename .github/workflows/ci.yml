@@ -1,8 +1,12 @@
 name: CI
 
-# 两层 CI（详见 docs/ENGINEERING.md）：
-#   fast — lint + 快测试子集（<1min），每次 push/PR 都跑，给出秒级反馈。
-#   full — 全量测试含 e2e 闭环，Python 3.11/3.13 矩阵，带超时；e2e 慢故单列。
+# 两层 CI：
+#   fast — lint（ruff，配置见 pyproject [tool.ruff]）+ 快测试子集（<1min），每次
+#          push/PR 都跑，是硬门。代码格式由本地 pre-commit（ruff format）保证，CI
+#          不重复硬拒存量格式债。
+#   full — 全量测试含真 PySCF dry 腿 e2e。需要重科学依赖（PySCF）且部分集成测试
+#          面向 Slurm/子进程后端，不适合每次 push 跑 → 仅手动（workflow_dispatch）
+#          或每周定时触发，在装好 PySCF 的 runner 上跑。
 # references/（第三方 clone）与 runs/（运行产物）改动不触发 CI。
 
 on:
@@ -16,6 +20,9 @@ on:
     paths-ignore:
       - 'references/**'
       - 'runs/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'   # 每周一 06:00 UTC 跑一次全量
 
 # 同一分支的旧运行自动取消，省算力
 concurrency:
@@ -23,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ---- 第一层：lint + 快测试（秒级反馈）----
+  # ---- 第一层：lint + 快测试（秒级反馈，每次 push/PR 的硬门）----
   fast:
     name: fast (lint + quick tests)
     runs-on: ubuntu-latest
@@ -43,13 +50,10 @@ jobs:
           pip install ruff pytest
           pip install -e .
 
-      - name: Ruff lint
+      - name: Ruff lint (config in pyproject [tool.ruff])
         run: ruff check .
 
-      - name: Ruff format check
-        run: ruff format --check .
-
-      - name: Quick test suite (<1min)
+      - name: Quick test suite (<1min, no heavy deps)
         run: |
           pytest -q \
             tests/test_kernel.py \
@@ -57,12 +61,14 @@ jobs:
             tests/test_adapters.py \
             tests/test_planner_stages.py
 
-  # ---- 第二层：全量测试含 e2e（矩阵 + 超时）----
+  # ---- 第二层：全量测试含真 PySCF e2e（手动/定时；装 PySCF）----
   full:
-    name: full (all tests incl. e2e)
+    name: full (all tests incl. real-PySCF e2e)
     needs: fast
+    # push/PR 不跑（GitHub runner 无 Slurm、重依赖慢）；仅手动或每周定时。
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -76,12 +82,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install package + test deps
+      - name: Install package + test + science deps
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-timeout
+          pip install pytest pytest-timeout pyscf
           pip install -e .
 
-      - name: Full test suite (incl. e2e loop)
-        # e2e（test_loop_e2e）跑真实闭环，较慢；单条用例超时保护，避免挂死占用 runner。
+      - name: Full test suite (incl. real-PySCF e2e loop)
+        # e2e/mcl 跑真实闭环（PySCF 子进程后端），较慢；单条用例超时保护，避免挂死。
         run: pytest -q --durations=10 --timeout=300

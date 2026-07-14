@@ -39,7 +39,7 @@ if importlib.util.find_spec("hypothesis") is None:  # graceful skip w/o dev extr
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
-from expos.kernel.store import RunStore, StoreError
+from expos.kernel.store import RunStore
 
 _SCRATCH = os.environ.get("PROPTEST_SCRATCH") or tempfile.gettempdir()
 

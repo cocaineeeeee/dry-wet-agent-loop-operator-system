@@ -31,7 +31,6 @@ from expos.kernel.objects import (
     Candidate,
     DecisionKind,
     DesignProvenance,
-    ExperimentObject,
     ObservationObject,
     TrustLevel,
 )
@@ -46,7 +45,6 @@ from expos.planner.arbiter import (
     exploration_quota,
     materializes_candidate,
     validate_proposal_content,
-    well_cost,
 )
 from expos.planner.stages import (
     DEFAULT_RULES,

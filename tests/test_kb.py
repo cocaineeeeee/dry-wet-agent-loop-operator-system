@@ -4,7 +4,6 @@
 import numpy as np
 import pytest
 
-from expos.kernel.objects import Routing, TrustLevel
 from expos.models.response_gp import ModelError, ResponseModel
 
 from tests.test_response_model import make_training

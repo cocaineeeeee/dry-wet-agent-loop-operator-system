@@ -17,8 +17,6 @@ import numpy as np
 
 from expos.adapters.base import AdapterError, ExecutionResult
 from expos.kernel.objects import (
-    Candidate,
-    Control,
     ExperimentObject,
     WellAssignment,
 )

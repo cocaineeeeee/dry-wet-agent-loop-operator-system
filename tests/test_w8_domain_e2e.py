@@ -337,7 +337,7 @@ def test_domain_yaml_structural():
 
     import yaml
 
-    from expos.domain import DomainConfig, DomainError, load_domain
+    from expos.domain import DomainConfig, load_domain
 
     root = Path(__file__).resolve().parents[1]
     path = root / "domains" / "solvent_screen.yaml"

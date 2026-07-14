@@ -38,7 +38,7 @@ inconclusive（§2.7）：p_top<FLOOR ∨ (p_top−p_second)<MARGIN ∨ top 反�
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -90,7 +90,6 @@ CAUSES = (
 _REMEDY: dict[str, tuple[ActionType, str, dict[str, Any]]] = {
     "edge_evaporation": (ActionType.DISAMBIGUATION_REPEAT, "detour", {"placement_hint": "center_only"}),
     "thermal_gradient": (ActionType.ADD_CONTROLS, "addition", {}),
-    "glare": (ActionType.REMEASURE, "detour", {"recapture": True}),  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
     "glare": (ActionType.REMEASURE, "detour", {"recapture": True}),  # lint: allow-domain-literal(M5/M6 legacy: crystal imaging/growth channel proper noun (glare/dust/grain_count), grandfathered pending Domain Profile extraction (Q3))
     "batch_effect": (ActionType.REPEAT_CANDIDATE, "addition", {"cross_batch": True}),
     "instrument_drift": (ActionType.REMEASURE, "detour", {"calibrate_flag": True}),

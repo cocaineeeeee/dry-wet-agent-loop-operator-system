@@ -15,7 +15,7 @@ import numpy as np
 from scipy.stats import qmc
 
 from expos.kernel.objects import Candidate, Constraint, DesignSpace
-from expos.design.space import DesignError, check_constraints, dim, from_unit, to_unit
+from expos.design.space import DesignError, check_constraints, dim, from_unit
 
 ScoreFn = Callable[[np.ndarray], np.ndarray]
 

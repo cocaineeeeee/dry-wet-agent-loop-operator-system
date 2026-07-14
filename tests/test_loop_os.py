@@ -1,6 +1,5 @@
 """M5 os 模式端到端验收：三级 QC 接线 / 假最优拒斥 / QC 税 / 双策略零分支 / resume。"""
 
-import json
 from pathlib import Path
 
 import pytest

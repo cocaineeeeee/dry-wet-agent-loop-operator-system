@@ -52,7 +52,6 @@ from expos.scheduler.jobs import (
     SshBackend,
 )
 from expos.scheduler.leases import (
-    Lease,
     LeaseError,
     LeaseManager,
     ResourceObject,

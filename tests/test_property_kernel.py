@@ -26,7 +26,7 @@ if importlib.util.find_spec("hypothesis") is None:  # dev extra 未装时整模�
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from expos.design.space import DesignError, dim, from_unit, to_unit, validate_params
+from expos.design.space import dim, from_unit, to_unit, validate_params
 from expos.kernel.lifecycle import TrustPolicy, adjudicate
 from expos.kernel.objects import (
     ActionType,

@@ -41,5 +41,19 @@ dev = ["pytest", "hypothesis"]
 [tool.setuptools.packages.find]
 include = ["expos*"]
 
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+# 第三方 clone / 运行产物 / 生成站点 / 临时区 不参与 lint。
+extend-exclude = ["references", "runs", "site", "scratchpad", "docs"]
+
+[tool.ruff.lint]
+# 本仓权威 lint 是 scripts/expos_lint.py（pre-commit 门）。ruff 在 CI 只把关会真正
+# 出错的问题（pyflakes F* + 关键 E/W），忽略与项目风格冲突的规则：
+#   E402 大量脚本式/条件 import（ui 页面、软依赖探测）是有意的；
+#   E501 行长由 format 控制，不硬拒；E70x 紧凑单行 / E741 教学变量名是既有风格；
+#   E401 单行多 import 少量存在；F841 未使用的中间/夹具变量是既有风格，逐步清理不硬拒。
+ignore = ["E402", "E501", "E701", "E702", "E703", "E731", "E741", "E401", "F841"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

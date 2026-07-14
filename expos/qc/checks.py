@@ -55,9 +55,7 @@ from expos.kernel.objects import (
 )
 from expos.qc.stats import (
     StatsError,
-    cohens_d,
     cusum,
-    mad_z,
     median_polish,
     moran_permutation,
     queen_w,

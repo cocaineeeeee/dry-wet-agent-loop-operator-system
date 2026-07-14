@@ -1,4 +1,4 @@
-<title>expos — 一个 dry-wet-agent loop 引擎，主线转向生物</title>
+<title>expos — a dry-wet-agent loop engine, now turning toward biology</title>
 <style>
 /* ============ tokens: committed single dark theme (instrument film) ============ */
 :root{
@@ -188,8 +188,8 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
 
   <!-- honesty badge -->
   <div id="honesty">
-    <b>Dry:</b> 真实计算 (化学 PySCF · 生物 sequence proxy) &nbsp;·&nbsp; <b>Wet:</b> 模拟仪器<br>
-    <b>Agent:</b> 默认确定性 &nbsp;·&nbsp; biological loop: 尚未运行 (M24-B)
+    <b>Dry:</b> real computation (chemistry PySCF · biology sequence proxy) &nbsp;·&nbsp; <b>Wet:</b> simulated instrument<br>
+    <b>Agent:</b> deterministic by default &nbsp;·&nbsp; biological loop: not yet run (M24-B)
   </div>
 
   <!-- source / provenance badge -->
@@ -197,20 +197,20 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
 
   <!-- ================= s0 cold open ================= -->
   <section class="scene" id="s0">
-    <div class="q rv d1">一个实验，能不能改变一个 AI <em>相信</em>什么——<br>并改变它接下来做什么？</div>
+    <div class="q rv d1">Can a single experiment change what an AI <em>believes</em>—<br>and change what it does next?</div>
     <div class="claim rv d3">
-      <span class="claimchip"><span class="lab">这套引擎的名字</span>
-        <b>dry-wet-agent loop</b> ＝ 干实验 → 湿实验 → agent 自适应闭环</span>
+      <span class="claimchip"><span class="lab">The name of this engine</span>
+        <b>dry-wet-agent loop</b> = dry lab → wet lab → agent, an adaptive closed loop</span>
     </div>
   </section>
 
   <!-- ================= sLoop — the loop engine hero ================= -->
   <section class="scene" id="sLoop">
-    <div class="kicker">00 · 闭环引擎</div>
-    <h2>一个 loop 引擎：propose → dry → promote → wet → evidence → claim → knowledge → <em>re-propose</em></h2>
+    <div class="kicker">00 · The loop engine</div>
+    <h2>A loop engine: propose → dry → promote → wet → evidence → claim → knowledge → <em>re-propose</em></h2>
     <div class="loopstage">
       <svg class="loopsvg rv d1" viewBox="0 0 640 372" width="640" height="372" role="img"
-           aria-label="自适应闭环：提议、干腿、门、湿腿、证据、断言、知识，环心是 agent 自适应决策">
+           aria-label="adaptive closed loop: propose, dry, promote, wet, evidence, claim, knowledge, with the agent making adaptive decisions at the center">
         <defs>
           <marker id="ah" markerWidth="9" markerHeight="9" refX="6.5" refY="3.2" orient="auto">
             <path d="M0,0 L7,3.2 L0,6.4 Z" fill="#5C6E7F"/></marker>
@@ -233,67 +233,67 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
         <g class="rv d1">
           <circle cx="320" cy="180" r="54" fill="#0F1620" stroke="#4FD8C4" stroke-width="1.3" stroke-dasharray="4 4"/>
           <text x="320" y="175" fill="#4FD8C4" font-size="17" text-anchor="middle" font-weight="600">AGENT</text>
-          <text x="320" y="193" fill="#93A4B5" font-size="10.5" text-anchor="middle">自适应决策</text>
+          <text x="320" y="193" fill="#93A4B5" font-size="10.5" text-anchor="middle">adaptive decisions</text>
         </g>
         <!-- nodes -->
         <g class="rv d2"><rect x="272" y="29" width="96" height="42" rx="9" fill="#121A24" stroke="#93A4B5"/>
-          <text x="320" y="47" fill="#E8EEF4" font-size="14" text-anchor="middle">提议</text>
+          <text x="320" y="47" fill="#E8EEF4" font-size="14" text-anchor="middle">Propose</text>
           <text x="320" y="62" fill="#5C6E7F" font-size="9" text-anchor="middle">PROPOSE</text></g>
         <g class="rv d3"><rect x="467" y="78" width="96" height="42" rx="9" fill="#121A24" stroke="#6FA8E8"/>
-          <text x="515" y="96" fill="#E8EEF4" font-size="14" text-anchor="middle">干腿</text>
+          <text x="515" y="96" fill="#E8EEF4" font-size="14" text-anchor="middle">Dry</text>
           <text x="515" y="111" fill="#5C6E7F" font-size="9" text-anchor="middle">DRY · compute</text></g>
         <g class="rv d4"><rect x="516" y="188" width="96" height="42" rx="9" fill="#121A24" stroke="#93A4B5"/>
-          <text x="564" y="206" fill="#E8EEF4" font-size="14" text-anchor="middle">门</text>
+          <text x="564" y="206" fill="#E8EEF4" font-size="14" text-anchor="middle">Gate</text>
           <text x="564" y="221" fill="#5C6E7F" font-size="9" text-anchor="middle">PROMOTE</text></g>
         <g class="rv d5"><rect x="380" y="276" width="96" height="42" rx="9" fill="#121A24" stroke="#F5A94B"/>
-          <text x="428" y="294" fill="#E8EEF4" font-size="14" text-anchor="middle">湿腿</text>
+          <text x="428" y="294" fill="#E8EEF4" font-size="14" text-anchor="middle">Wet</text>
           <text x="428" y="309" fill="#5C6E7F" font-size="9" text-anchor="middle">WET · assay</text></g>
         <g class="rv d6"><rect x="164" y="276" width="96" height="42" rx="9" fill="#121A24" stroke="#4FD8C4"/>
-          <text x="212" y="294" fill="#E8EEF4" font-size="14" text-anchor="middle">证据</text>
+          <text x="212" y="294" fill="#E8EEF4" font-size="14" text-anchor="middle">Evidence</text>
           <text x="212" y="309" fill="#5C6E7F" font-size="9" text-anchor="middle">EVIDENCE</text></g>
         <g class="rv d7"><rect x="28" y="188" width="96" height="42" rx="9" fill="#121A24" stroke="#93A4B5"/>
-          <text x="76" y="206" fill="#E8EEF4" font-size="14" text-anchor="middle">断言</text>
+          <text x="76" y="206" fill="#E8EEF4" font-size="14" text-anchor="middle">Claim</text>
           <text x="76" y="221" fill="#5C6E7F" font-size="9" text-anchor="middle">CLAIM</text></g>
         <g class="rv d8"><rect x="77" y="78" width="96" height="42" rx="9" fill="#121A24" stroke="#4FD8C4"/>
-          <text x="125" y="96" fill="#E8EEF4" font-size="14" text-anchor="middle">知识</text>
+          <text x="125" y="96" fill="#E8EEF4" font-size="14" text-anchor="middle">Knowledge</text>
           <text x="125" y="111" fill="#5C6E7F" font-size="9" text-anchor="middle">KNOWLEDGE</text></g>
       </svg>
-      <p class="loopcap rv d9">agent 在环心做<b>自适应决策</b>；实验结果回流，改写 knowledge，改变下一轮提议。<br>
-        同一个引擎——化学域已验证，主线现转向 <em>biology</em>。</p>
+      <p class="loopcap rv d9">The agent makes <b>adaptive decisions</b> at the center; experimental results flow back, rewrite the knowledge, and reshape the next round of proposals.<br>
+        One engine—validated in chemistry, now turning its main line toward <em>biology</em>.</p>
     </div>
   </section>
 
   <!-- ================= sChem — chemistry proof (real results) ================= -->
   <section class="scene" id="sChem">
-    <div class="kicker">01 · 化学域 · 已验证的基础</div>
-    <h2>这套 loop 引擎，已在化学域跑出<em>真结果</em></h2>
+    <div class="kicker">01 · Chemistry domain · a validated foundation</div>
+    <h2>This loop engine has already produced <em>real results</em> in chemistry</h2>
     <div class="swapwrap">
       <div class="swapcard left rv d1" style="flex:2.2">
         <div class="dh">solvent_screen</div>
-        <div class="dsub">一次完整 loop turn · 8 solvents · seed 7</div>
-        <div class="row"><span class="k">干腿 DRY</span><span class="v">真实 PySCF dipole 作业 · <span class="v sup">SUCCEEDED</span></span></div>
-        <div class="row"><span class="k">门 PROMOTE</span><span class="v">证据门筛选 · 未选者留驳回理由</span></div>
-        <div class="row"><span class="k">湿腿 WET</span><span class="v">交错重复板 · <span class="v hot">模拟仪器（明标）</span></span></div>
-        <div class="row"><span class="k">证据 CERTIFY</span><span class="v">e-product 10451.9 / 阈值 20 · STRONG</span></div>
-        <div class="row"><span class="k">断言 CLAIM</span><span class="v">种子断言被推翻 → <span class="v bad">REJECTED</span> · effect −0.086</span></div>
-        <div class="row"><span class="k">知识 KNOWLEDGE</span><span class="v fp">003cae6f… → 809ca7a1…</span></div>
+        <div class="dsub">one full loop turn · 8 solvents · seed 7</div>
+        <div class="row"><span class="k">DRY</span><span class="v">real PySCF dipole jobs · <span class="v sup">SUCCEEDED</span></span></div>
+        <div class="row"><span class="k">PROMOTE</span><span class="v">evidence-gated selection · rejects keep their reason</span></div>
+        <div class="row"><span class="k">WET</span><span class="v">interleaved replicate plate · <span class="v hot">simulated instrument (labeled)</span></span></div>
+        <div class="row"><span class="k">CERTIFY</span><span class="v">e-product 10451.9 / threshold 20 · STRONG</span></div>
+        <div class="row"><span class="k">CLAIM</span><span class="v">seed claim overturned → <span class="v bad">REJECTED</span> · effect −0.086</span></div>
+        <div class="row"><span class="k">KNOWLEDGE</span><span class="v fp">003cae6f… → 809ca7a1…</span></div>
         <div class="row"><span class="k">Gate 12</span><span class="v sup">CHAIN COMPLETE</span></div>
       </div>
-      <p class="sidenote rv d3">证据推翻了种子断言，知识状态迁移到新的哈希版本——<b style="color:var(--ink)">结果真的改变了引擎相信的东西</b>。每个数字都可回溯到一次归档 run。</p>
+      <p class="sidenote rv d3">The evidence overturned the seed claim, and the knowledge state migrated to a new hash version—<b style="color:var(--ink)">the result truly changed what the engine believes</b>. Every number traces back to an archived run.</p>
     </div>
-    <div class="swaptestimony rv d4">化学两域把 loop 引擎<b>整条跑穿</b>——这是「已验证的基础」，不是本片主线。</div>
+    <div class="swaptestimony rv d4">Two chemistry domains ran the loop engine <b>end to end</b>—this is the validated foundation, not the main subject of this film.</div>
   </section>
 
   <!-- ================= sSwap — domain swap existence proof ================= -->
   <section class="scene" id="sSwap">
-    <div class="kicker">02 · 换域证明</div>
-    <h2>同一个 kernel，换一门科学——<em>字节不动</em></h2>
+    <div class="kicker">02 · Domain-swap proof</div>
+    <h2>The same kernel, a different science—<em>zero bytes changed</em></h2>
     <div class="swapwrap">
       <div class="swapcard left rv d1">
         <div class="dh">solvent_screen</div>
         <div class="dsub">8 solvents · polarity descriptor</div>
         <div class="row"><span class="k">dry engine</span><span class="v">real PySCF dipole jobs</span></div>
-        <div class="row"><span class="k">verdict</span><span class="v bad">种子断言 REJECTED</span></div>
+        <div class="row"><span class="k">verdict</span><span class="v bad">seed claim REJECTED</span></div>
         <div class="row"><span class="k">effect</span><span class="v">−0.086</span></div>
         <div class="row"><span class="k">knowledge fp</span><span class="v fp">809ca7a1…</span></div>
       </div>
@@ -305,7 +305,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
         <div class="dh">catalyst_screen</div>
         <div class="dsub">5 ligands · coordinate descriptor</div>
         <div class="row"><span class="k">dry engine</span><span class="v">10 real PySCF ligand jobs</span></div>
-        <div class="row"><span class="k">wet obs</span><span class="v">32 模拟观测</span></div>
+        <div class="row"><span class="k">wet obs</span><span class="v">32 simulated observations</span></div>
         <div class="row"><span class="k">promotion</span><span class="v">[NH3, PCl3]</span></div>
         <div class="row"><span class="k">verdict</span><span class="v sup">insufficient → SUPPORTED</span></div>
         <div class="row"><span class="k">effect</span><span class="v sup">+0.412 <span style="color:var(--ink3)">(analytic +0.43)</span></span></div>
@@ -313,109 +313,109 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
         <div class="row"><span class="k">knowledge fp</span><span class="v fp">4f087ef9…</span></div>
       </div>
     </div>
-    <div class="swaptestimony rv d4">变化的形状与分层预言重合：<b>域在边缘变，kernel 一字未改。</b>这证明了 runtime 可换域——于是我们把它指向真正难的科学。</div>
+    <div class="swaptestimony rv d4">The shape of what changed matches the layered prediction: <b>the domain changes at the edges, the kernel not a single byte.</b> This proves the runtime can swap domains—so we pointed it at genuinely hard science.</div>
   </section>
 
   <!-- ================= sPivot — biology becomes the primary direction ================= -->
   <section class="scene" id="sPivot">
-    <div class="kicker">03 · 主线转向</div>
-    <h2>化学证明 runtime 能换域；<em>biology</em> 才逼它面对全新的科学物件</h2>
+    <div class="kicker">03 · The main line turns</div>
+    <h2>Chemistry proved the runtime can swap domains; <em>biology</em> is what forces it to face an entirely new scientific object</h2>
     <div class="objjump">
       <div class="objcard chem rv d1">
-        <div class="dom">域 1 · solvent</div>
-        <div class="obj">molecule 分子</div>
-        <div class="note">一个几何 → 一个 dipole。设计物件本身就是一张 Z-matrix。</div>
+        <div class="dom">Domain 1 · solvent</div>
+        <div class="obj">molecule</div>
+        <div class="note">One geometry → one dipole. The design object is itself a Z-matrix.</div>
       </div>
       <div class="objarrow rv d2">→</div>
       <div class="objcard chem rv d2">
-        <div class="dom">域 2 · catalyst</div>
-        <div class="obj">reaction / ligand 配体</div>
-        <div class="note">仍是几何 → coordinate descriptor。同一个假设，藏得更深。</div>
+        <div class="dom">Domain 2 · catalyst</div>
+        <div class="obj">reaction / ligand</div>
+        <div class="note">Still geometry → coordinate descriptor. The same assumption, buried deeper.</div>
       </div>
       <div class="objarrow rv d3">→</div>
       <div class="objcard bio rv d3">
-        <div class="dom">域 3 · cell-free expression</div>
-        <div class="obj">sequence / construct 构件</div>
-        <div class="note">表达 / 表型。一个 construct 不是分子——它没有几何可以伪造。</div>
+        <div class="dom">Domain 3 · cell-free expression</div>
+        <div class="obj">sequence / construct</div>
+        <div class="note">Expression / phenotype. A construct is not a molecule—it has no geometry to fake.</div>
       </div>
     </div>
-    <div class="leakline rv d4">两个化学域藏着一处抽象泄漏，生物第三域第一次把它逼到明面：
-      <b>干腿契约曾假设每个设计物件都是分子几何</b> —— <code>dry_species → Z-matrix</code>。这正是主线转向 biology 的理由。</div>
+    <div class="leakline rv d4">The two chemistry domains hid an abstraction leak that the third, biological domain forces into the open for the first time:
+      <b>the dry contract once assumed every design object is a molecular geometry</b> —— <code>dry_species → Z-matrix</code>. This is exactly why the main line turns toward biology.</div>
   </section>
 
   <!-- ================= sExec — M24-A execution surface (architecture, not a result) ================= -->
   <section class="scene" id="sExec">
-    <div class="kicker">04 · M24-A · 执行面（架构，不是结果）</div>
-    <h2>Contract v3：干腿契约不再假设一切都是分子几何</h2>
+    <div class="kicker">04 · M24-A · Execution surface (architecture, not a result)</div>
+    <h2>Contract v3: the dry contract no longer assumes everything is a molecular geometry</h2>
     <div class="execgrid">
       <div class="execcard full rv d1">
         <div class="eh">Domain Contract v3</div>
-        <div class="esub">生物执行面 · docs/M24_CONTRACT_V3.md</div>
+        <div class="esub">biology execution surface · docs/M24_CONTRACT_V3.md</div>
         <div class="contract"><span class="was">dry_species()</span><span class="arr">→</span><span class="now">compute_targets() → ComputeTarget</span></div>
         <div class="kinds"><b>input_kind:</b> molecular_geometry &nbsp;|&nbsp; sequence_construct</div>
-        <div class="execnote">化学假设被从干腿契约里抽走。一个 construct 声明 <b>sequence_construct</b>，无需伪造分子几何——没有假 Z-matrix 冒充 DNA。</div>
+        <div class="execnote">The chemistry assumption is pulled out of the dry contract. A construct declares <b>sequence_construct</b> and never fakes a molecular geometry—no fake Z-matrix masquerading as DNA.</div>
       </div>
       <div class="execcard rv d2">
-        <div class="eh">序列干腿 · 真实计算</div>
+        <div class="eh">Sequence dry leg · real computation</div>
         <div class="esub">SequenceProxyAdapter · expos/adapters/dry/sequences.py</div>
         <div class="proxyrow">
           <div class="proxybox strong">
-            <div class="pl">强设计 construct</div>
+            <div class="pl">strong-design construct</div>
             <div class="pv">0.68</div>
             <div class="feat">expression_proxy<br>gc 0.47 · cai 1.00 · rbs 1.00</div>
           </div>
           <div class="proxybox weak">
-            <div class="pl">弱设计 construct</div>
+            <div class="pl">weak-design construct</div>
             <div class="pv">0.14</div>
             <div class="feat">expression_proxy<br>gc 0.19 · cai 0.01 · rbs 0.33</div>
           </div>
         </div>
-        <div class="execnote">从序列<b>真实、确定性地算出</b>——GC / CAI / RBS 驱动一个诚实的有偏 proxy。是 computed，<b>not a loop result</b>；真表达水平藏在湿腿读数里。</div>
+        <div class="execnote">Computed from the sequence <b>truly and deterministically</b>—GC / CAI / RBS drive an honestly biased proxy. It is computed, <b>not a loop result</b>; the true expression level lives in the wet-leg readout.</div>
       </div>
       <div class="execcard rv d3">
-        <div class="eh">三判别真值面</div>
+        <div class="eh">Three-way truth face</div>
         <div class="esub">design, not measured · expos/adapters/wet/sim_reader.py</div>
         <div class="faces">
-          <div class="face hi"><div class="fn">expression_high</div><div class="mu">mu = 0.85</div><div class="fnote">正向面</div></div>
-          <div class="face fl"><div class="fn">expression_flipped</div><div class="mu">mu = 0.20</div><div class="fnote">镜像面</div></div>
-          <div class="face ft"><div class="fn">flat</div><div class="mu">null</div><div class="fnote">复用零面</div></div>
+          <div class="face hi"><div class="fn">expression_high</div><div class="mu">mu = 0.85</div><div class="fnote">positive face</div></div>
+          <div class="face fl"><div class="fn">expression_flipped</div><div class="mu">mu = 0.20</div><div class="fnote">mirror face</div></div>
+          <div class="face ft"><div class="fn">flat</div><div class="mu">null</div><div class="fnote">reused null face</div></div>
         </div>
-        <div class="execnote">expression_high / flipped / flat 三面是<b>设计</b>好的裁决空间（mu = 0.85 按设计与 catalyst_high 重合），域中立的 runtime 件——是 <b>design, not measured</b>，不是测出来的结果。</div>
+        <div class="execnote">The expression_high / flipped / flat faces are a <b>designed</b> decision space (mu = 0.85 coincides with catalyst_high by design), a domain-neutral runtime part—<b>design, not measured</b>, not a measured result.</div>
       </div>
     </div>
   </section>
 
   <!-- ================= sLedger — six-criteria honesty ledger ================= -->
   <section class="scene" id="sLedger">
-    <div class="kicker">05 · 诚实台账</div>
-    <h2>第一个生物 loop 的六条判准——以及我们真实的进度</h2>
+    <div class="kicker">05 · Honesty ledger</div>
+    <h2>The six criteria for the first biological loop—and our honest progress</h2>
     <div class="crit">
-      <div class="critrow done rv d1"><span class="cn">①</span><span class="ct">construct 无需伪造分子几何</span><span class="cs">✅ by design — Contract v3</span></div>
-      <div class="critrow done rv d2"><span class="cn">⑥</span><span class="ct">kernel / ledger / certification 保持生物盲</span><span class="cs">✅ countersigned — kernel 未改</span></div>
-      <div class="critrow pend rv d3"><span class="cn">②</span><span class="ct">表型数据真的改变一条 claim</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d4"><span class="cn">③</span><span class="ct">被改变的 claim 改变 knowledge 状态</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d5"><span class="cn">④</span><span class="ct">被改变的 knowledge 改变下一轮 construct</span><span class="cs">⏳ pending M24-B</span></div>
-      <div class="critrow pend rv d6"><span class="cn">⑤</span><span class="ct">high / flipped / flat 三面在跑动的 loop 里全成立</span><span class="cs">⏳ pending M24-B</span></div>
+      <div class="critrow done rv d1"><span class="cn">①</span><span class="ct">a construct never fakes a molecular geometry</span><span class="cs">✅ by design — Contract v3</span></div>
+      <div class="critrow done rv d2"><span class="cn">⑥</span><span class="ct">kernel / ledger / certification stay biology-blind</span><span class="cs">✅ countersigned — kernel unchanged</span></div>
+      <div class="critrow pend rv d3"><span class="cn">②</span><span class="ct">phenotype data truly changes a claim</span><span class="cs">⏳ pending M24-B</span></div>
+      <div class="critrow pend rv d4"><span class="cn">③</span><span class="ct">the changed claim changes the knowledge state</span><span class="cs">⏳ pending M24-B</span></div>
+      <div class="critrow pend rv d5"><span class="cn">④</span><span class="ct">the changed knowledge changes the next round's construct</span><span class="cs">⏳ pending M24-B</span></div>
+      <div class="critrow pend rv d6"><span class="cn">⑤</span><span class="ct">all three faces (high / flipped / flat) hold in a running loop</span><span class="cs">⏳ pending M24-B</span></div>
     </div>
-    <div class="critstate rv d7">执行面已就位；生物闭环（表型 → knowledge → 下一轮 construct）的<b>结果尚不存在，本片不展示任何生物裁决</b>。它是下一个里程碑 —— M24-B（pending）。</div>
+    <div class="critstate rv d7">The execution surface is in place; for the biological loop (phenotype → knowledge → next construct), <b>no result exists yet, and this film shows no biological verdict</b>. It is the next milestone — M24-B (pending).</div>
   </section>
 
   <!-- ================= sRoad — roadmap ================= -->
   <section class="scene" id="sRoad">
-    <div class="kicker">06 · 路线图</div>
-    <h2>从「可换域的化学 runtime」走向「<em>biology</em> 自适应研究 OS」</h2>
+    <div class="kicker">06 · Roadmap</div>
+    <h2>From a domain-swappable chemistry runtime toward a <em>biology</em> adaptive research OS</h2>
     <div class="roadmap">
-      <div class="rmnode done rv d1"><div class="rstage">M16–M20 · done</div><div class="rt">Chemistry Foundation</div>2 域，kernel 未动</div>
+      <div class="rmnode done rv d1"><div class="rstage">M16–M20 · done</div><div class="rt">Chemistry Foundation</div>2 domains, kernel untouched</div>
       <div class="rmarrow rv d2">→</div>
-      <div class="rmnode now rv d2"><div class="rstage">M24-A · in progress</div><div class="rt">Contract v3</div>生物执行面已建</div>
+      <div class="rmnode now rv d2"><div class="rstage">M24-A · in progress</div><div class="rt">Contract v3</div>biology execution surface built</div>
       <div class="rmarrow rv d3">→</div>
-      <div class="rmnode next rv d3"><div class="rstage">M24-B · next</div><div class="rt">Cell-Free Expression Loop</div>第一个真正的生物闭环</div>
+      <div class="rmnode next rv d3"><div class="rstage">M24-B · next</div><div class="rt">Cell-Free Expression Loop</div>the first real biological loop</div>
       <div class="rmarrow rv d4">→</div>
-      <div class="rmnode later rv d4"><div class="rstage">M25</div><div class="rt">Sequence Optimization</div>generate &amp; test 设计</div>
+      <div class="rmnode later rv d4"><div class="rstage">M25</div><div class="rt">Sequence Optimization</div>generate &amp; test design</div>
       <div class="rmarrow rv d5">→</div>
-      <div class="rmnode later rv d5"><div class="rstage">目标</div><div class="rt">Biological Research OS</div></div>
+      <div class="rmnode later rv d5"><div class="rstage">goal</div><div class="rt">Biological Research OS</div></div>
     </div>
-    <div class="rmparallel rv d6"><span class="pk">parallel track</span>真机（M26）—— Opentrons · plate reader · cell-free kit —— 是<span class="pt">平行工程支线，不是主要科学目标。</span></div>
+    <div class="rmparallel rv d6"><span class="pk">parallel track</span>Real hardware (M26) —— Opentrons · plate reader · cell-free kit —— is a <span class="pt">parallel engineering track, not the primary scientific goal.</span></div>
   </section>
 
   <!-- ================= sClose ================= -->
@@ -426,13 +426,13 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
       <span class="hot">EVIDENCE</span> <span class="arr">→</span> <span class="hot">CLAIM</span> <span class="arr">→</span> <span class="hot">KNOWLEDGE</span> <span class="arr">→</span> RE-PROPOSE&nbsp;<span class="arr">↺</span>
     </div>
     <div class="brand rv d3">expos
-      <small>一个 dry-wet-agent loop 引擎 · 化学已验证换域 · 主线转向 biology</small>
+      <small>A dry-wet-agent loop engine · domain swap validated in chemistry · main line turning to biology</small>
     </div>
     <div class="finelines rv d4">
-      真实干腿计算（化学 PySCF；生物 sequence-feature proxy）· 可信的模拟湿腿<br>
-      换域能力已在 2 个化学域证明；生物执行面已建（Contract v3）<br>
-      生物闭环：进行中（M24-B）—— 尚无任何生物结果被声称<br>
-      真机未接入 —— 平行工程支线
+      Real dry-leg computation (chemistry PySCF; biology sequence-feature proxy) · credible simulated wet leg<br>
+      Domain swap proven across 2 chemistry domains; biology execution surface built (Contract v3)<br>
+      Biological loop: in progress (M24-B) — no biological result is claimed yet<br>
+      Real hardware not connected — a parallel engineering track
     </div>
   </section>
 
@@ -441,7 +441,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
     <button id="playbtn" aria-label="Play or pause">▶</button>
     <div id="bar"><div id="track"><div id="fill"></div></div></div>
     <div id="tlabel">0:00 / 2:53</div>
-    <button id="cut" title="播放 ~80 秒精剪">SHORT CUT</button>
+    <button id="cut" title="Play the ~80s short cut">SHORT CUT</button>
   </div>
 </div></div>
 

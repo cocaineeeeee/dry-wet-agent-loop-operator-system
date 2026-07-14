@@ -22,7 +22,6 @@ from expos.planner.stages import (
     high_suspect_streak,
     min_trusted,
     streak_cleared,
-    trusted_ratio_below,
     validate_rules,
 )
 

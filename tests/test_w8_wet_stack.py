@@ -8,7 +8,6 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
 import pytest
 from pathlib import Path as _P
@@ -90,15 +89,14 @@ Run: ./venv/bin/python -m pytest tests/ -v
 """
 
 
-import time
 
 
 from expos.adapters.wet.driver import WetDriver, GoalState
 from expos.adapters.wet.ot_protocol import (
-    compile_and_validate, execute_simulated, ValidationError, OT_BACKEND,
+    compile_and_validate, execute_simulated, ValidationError,
 )
 from expos.adapters.wet.protocol_spec import (
-    ProtocolSpec, SolventSample, Stock, make_gradient_spec,
+    ProtocolSpec, SolventSample, make_gradient_spec,
 )
 
 

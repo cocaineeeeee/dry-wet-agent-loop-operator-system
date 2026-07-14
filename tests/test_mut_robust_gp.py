@@ -9,7 +9,7 @@ import numpy as np
 
 from expos.models.robust_gp import RobustResponseModel
 
-from tests.test_robust_gp import make_space, make_training
+from tests.test_robust_gp import make_training
 
 
 def test_score_pool_ucb_increases_with_kappa():
