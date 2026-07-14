@@ -935,6 +935,27 @@ def _percent_of_control_normalize(
     return normalized, _NORMALIZED_METRIC_RANGE
 
 
+def certification_metric_range(cfg: DomainConfig) -> tuple[float, float]:
+    """The effective metric scale a round's certification CS-width gate is calibrated
+    against (letter 149, sibling of the edge scale-leak). A domain that declares BOTH a
+    negative and a positive assay control normalizes its wet readout to percent-of-control
+    BEFORE certification (see ``_percent_of_control_normalize``), so its certification
+    effect units live on ``_NORMALIZED_METRIC_RANGE`` ``(0, 200)``; every other domain
+    (all chemistry) keeps the raw ``cfg.metric_range``. This is the SAME neg+pos predicate
+    the readout normalization gates on, evaluated from the domain config alone (no wet
+    observations needed) so a driver can compute it at wiring time.
+
+    Callers pass the result into ``AggregationConfig(metric_range=...)`` so the scale-aware
+    ``effective_w_min`` matches the readout scale the aggregator actually sees -- a DOMAIN
+    FACT, never a hand-scaled w_min. Chemistry -> ``cfg.metric_range`` -> span 1.2 ->
+    ``effective_w_min == w_min`` byte-identical; a controls domain -> ``(0, 200)`` -> the
+    eligibility bound scales up ~167x, exactly matching the percent-of-control readout."""
+    roles = set(_control_roles(cfg).values())
+    if "negative" in roles and "positive" in roles:
+        return _NORMALIZED_METRIC_RANGE
+    return cfg.metric_range
+
+
 def _dry_experiment(
     cfg: DomainConfig, round_id: int, cands: list[Candidate], bindings: _DomainBindings,
     dry_plan: _DryLegPlan,

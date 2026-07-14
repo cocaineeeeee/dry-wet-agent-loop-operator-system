@@ -134,6 +134,22 @@ TEST_METHOD = "sign_flip_permutation"
 #: only detect and refuse. plate_order_balance is the forward hook for ③.
 PLATE_ORDER_BALANCE_MAX = 0.3
 
+#: Reference metric span the CS-width eligibility bound ``w_min`` was calibrated on --
+#: the chemistry RAW measurement scale (``metric_range`` span ~1.2 a.u.). ``w_min`` is an
+#: ABSOLUTE effect-unit bound (an effect estimate and its confidence sequence carry the
+#: readout's units), so exactly like the edge floor (``qc.checks._EDGE_REFERENCE_SPAN``,
+#: letter 147) it is SCALE-IMPLICIT: a domain that normalizes its readout to a different
+#: scale (biology percent-of-control, span 200) produces genuinely decisive confidence
+#: sequences whose width is ~167x wider in absolute units, so a raw 0.5 bound mis-rejects
+#: them (letter 149: CI width 3.38 on the (0,200) scale > 0.5 -> INSUFFICIENT despite
+#: e_product=1033 and a CS excluding zero). FIX: express w_min RELATIVE to the effective
+#: certification metric span (``AggregationConfig.effective_w_min``). At the reference span
+#: the factor is exactly 1.0 (IEEE ``span/span``) -> effective bound == the historical
+#: absolute value bit-for-bit (chemistry byte-identical); at span 200 it scales up ~167x.
+#: The OTHER eligibility gates (e-product vs 1/alpha, CS-excludes-zero, r_min) are already
+#: scale-invariant, so w_min is the sole absolute-metric-scale gate in the aggregator.
+W_MIN_REFERENCE_SPAN = 1.2
+
 
 class AggregationError(ExposError):
     """Malformed aggregation input (e.g. a claim head naming empty arms, or a
@@ -213,8 +229,19 @@ class AggregationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     alpha: float = Field(default=0.05, gt=0.0, lt=1.0)
-    #: CS-width branch bound (effect units) -- CS wider than this => insufficient.
+    #: CS-width branch bound calibrated on the reference scale (``W_MIN_REFERENCE_SPAN``);
+    #: the OPERATIVE gate is ``effective_w_min`` (this value rescaled to ``metric_range``).
+    #: A CS wider than the effective bound => insufficient (precision insufficient).
     w_min: float = Field(default=0.5, gt=0.0)
+    #: The effective certification metric scale ``(min, max)`` the CS-width gate is
+    #: calibrated RELATIVE to (letter 149). Default = the chemistry reference span
+    #: ``(0, W_MIN_REFERENCE_SPAN)``: span/reference == 1.0 exactly, so
+    #: ``effective_w_min == w_min`` bit-for-bit (chemistry byte-identical). A caller whose
+    #: domain normalizes the readout (biology percent-of-control -> ``(0, 200)``) passes
+    #: that range, scaling the eligibility bound to the readout the aggregator sees. This
+    #: is a DOMAIN FACT (the readout scale), not a hand-scaled w_min -- the magic factor
+    #: span/W_MIN_REFERENCE_SPAN is derived structurally here, never hidden in a caller.
+    metric_range: tuple[float, float] = (0.0, W_MIN_REFERENCE_SPAN)
     #: single-round-fluke guard -- fewer accumulated rounds than this => insufficient.
     r_min: int = Field(default=2, ge=1)
     #: practical-relevance floor on |pooled effect|; below it an aligned, eligible
@@ -238,12 +265,33 @@ class AggregationConfig(BaseModel):
         """Eligibility threshold ``1/alpha`` (e >= this is necessary to adjudicate)."""
         return 1.0 / self.alpha
 
+    @property
+    def effective_w_min(self) -> float:
+        """``w_min`` rescaled to the effective certification metric span (letter 149).
+
+        The CS-width eligibility bound is an ABSOLUTE effect-unit quantity calibrated on
+        the chemistry raw scale (``W_MIN_REFERENCE_SPAN``). Expressed relative to the run's
+        ``metric_range`` span it becomes scale-aware: at the reference span the factor is
+        exactly 1.0 (IEEE ``span/span``), so this returns ``w_min`` bit-for-bit (chemistry
+        byte-identical); a normalized readout (biology ``(0, 200)``) scales it up ~167x, so
+        a genuinely decisive percent-of-control CS is no longer mis-read as too wide. A
+        non-positive span (a degenerate declared range) falls back to factor 1.0 -- mirrors
+        the edge floor's ``metric_span > 0`` guard in ``qc.checks``."""
+        lo, hi = self.metric_range
+        span = float(hi) - float(lo)
+        scale = span / W_MIN_REFERENCE_SPAN if span > 0.0 else 1.0
+        return self.w_min * scale
+
     def decision_thresholds(self) -> dict[str, Any]:
-        """The pinned threshold set recorded in the snapshot for K4 replay."""
+        """The pinned threshold set recorded in the snapshot for K4 replay. ``w_min`` is
+        pinned as the EFFECTIVE (scale-aware) bound so a third party replaying the verdict
+        from the event stream alone reads the same value ``_decide_status`` gated on --
+        no un-pinned scale factor (letter 149). At the reference span the effective bound
+        == the raw 0.5 exactly, so the pinned set stays chemistry byte-identical."""
         return {
             "alpha": self.alpha,
             "e_threshold": self.e_threshold,
-            "w_min": self.w_min,
+            "w_min": self.effective_w_min,
             "r_min": self.r_min,
             "practical_effect_floor": self.practical_effect_floor,
             "plate_order_balance_max": self.plate_order_balance_max,
@@ -647,7 +695,8 @@ def _interpretability_report(
         "achieved_power": achieved_power,  # display-only, never a gate (K3)
         "insufficient_branches": {
             "cs_contains_zero": cs_contains_zero,
-            "cs_width_over_w_min": cs_width > config.w_min,
+            # scale-aware bound (letter 149); == config.w_min at the reference span.
+            "cs_width_over_w_min": cs_width > config.effective_w_min,
             "rounds_below_r_min": rounds_observed < config.r_min,
         },
     }

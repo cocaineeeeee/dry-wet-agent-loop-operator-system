@@ -1,0 +1,130 @@
+# M26 v0.1 FOURTH biology-domain + FIRST DYNAMIC-phenotype domain: genetic circuit design.
+# Structural twin of cell_free_expression_screen.yaml: the SAME kernel/planner/qc/scheduler
+# drive it; only this file + the domains/genetic_circuit + adapters/{dry/circuit*,wet/timeseries*}
+# leaves change. Circuit semantics are confined to the domain/provider/adapter layer -- the
+# kernel/planner/evidence-compiler never see a promoter/toggle/Hill literal (domain-neutral
+# kernel hard gate, BIOLOGY_PROGRAM_2026 §4).
+#
+# DUAL-LEG:
+#   * dry leg (adapter: circuit_topology) -> metric `dynamic_proxy`: a typed CIRCUIT GRAPH is
+#     verified (5-level gate) then simulated (ODE/stochastic proxy); the load-bearing DYNAMIC
+#     phenotype scalar (steady state for a cassette dose response, bistable separation for a
+#     toggle) rides in as the value. Deterministic, in-process (no scipy/subprocess/sbatch).
+#   * wet leg (timeseries_reader) -> metric `dynamic_phenotype`: a hidden DYNAMIC truth surface
+#     maps a design coordinate to a time-series trace whose DERIVED phenotype carries the face
+#     sign (dynamic_high / dynamic_flipped / dynamic_flat). Simulation-level only; no real wet.
+#
+# STAGED (honest): `circuit_topology` is NOT yet registered in mcl's dry dispatch and the
+# dynamic faces / time-series observable schema are NOT yet in the shared truth registry, so
+# full load_domain() rejects this file at the adapter gate -- the EXACT staging precedent
+# cell_free_expression_screen sat in before session B wired its dry leg. The design_space /
+# objective / provider blocks are already structurally valid and the provider passes birth-time
+# governance (tests/test_m26_circuit_v01.py). SEAM LIST: docs/bio_seams/M26.md.
+name: genetic_circuit
+adapter: circuit_topology
+
+# M26 domain provider `<module>:<Class>`. Governance: check_complete (compute_targets keys ==
+# wet_coords keys, the three dynamic faces non-empty, dynamic_flat null declared, seed claims
+# well-formed) + validate_yaml (the `circuit` choices must equal the provider's circuit set).
+provider: domains.genetic_circuit.provider:GeneticCircuitProvider
+
+objective:
+  name: dynamic_phenotype
+  metric: dynamic_phenotype
+  direction: maximize
+  description: >-
+    Wet DYNAMIC reporter phenotype derived from a time-series (settled level / response
+    amplitude / switching time). Hidden truth is a dynamic surface: a coordinate->settled-level
+    Gaussian (only-mu-differs across faces) realised as a first-order reporter rise; the surface
+    lives only in the reader. The dry leg reports a separate `dynamic_proxy` channel (from the
+    ODE simulation of the typed graph) used for Dry->Wet promotion, not this objective directly.
+
+design_space:
+  name: genetic_circuit
+  variables:
+    # Load-bearing screening dim: each choice is a TYPED CIRCUIT (the expression-cassette dose
+    # ladder + two toggle-switch tunings). The dry leg verifies+simulates each circuit's graph;
+    # the wet leg realises its public normalized design coordinate (public design knowledge,
+    # NOT truth). Coordinate table: domains/genetic_circuit/provider.py wet_coords (verbatim).
+    - name: circuit
+      kind: categorical
+      choices: [cassette_pTet_J23100, cassette_pTet_J23106, cassette_pTet_J23114, "toggle_c1.00", "toggle_c0.40"]
+      descriptors:
+        cassette_pTet_J23100: {coord: 1.0}
+        cassette_pTet_J23106: {coord: 0.47}
+        cassette_pTet_J23114: {coord: 0.1}
+        "toggle_c1.00": {coord: 1.0}
+        "toggle_c0.40": {coord: 0.4}
+    # Recorded protocol conditions: carried through custody, FLAT in the truth surface (design-
+    # coordinate-only), exactly as the chemistry/M24 conditions. Standard cell-free / induction windows.
+    - {name: induction_time, kind: continuous, low: 0.0, high: 40.0, unit: "h"}
+    - {name: temperature, kind: continuous, low: 25.0, high: 37.0, unit: "C"}
+
+restrictions: []
+
+plate: {rows: 8, cols: 12}
+replicates: 8
+# Replicate-independence (docs/bio_refs/02 §3 aleatoric/epistemic split): declared `biological`
+# -- each replicate well is an INDEPENDENT reaction. INTRINSIC simulation noise (the stochastic
+# proxy's within-trace variance) is the ALEATORIC/technical axis and must NOT be counted as
+# independent biological evidence; independence comes from the environmental/context axis. SEAM
+# (B): the intrinsic-vs-context replicate distinction wiring (docs/bio_seams/M26.md).
+replicate_kind: biological
+
+# Calibration sentinel: the strong-design cassette (near the dynamic_high optimum).
+sentinel:
+  n: 2
+  params: {circuit: cassette_pTet_J23100, induction_time: 20.0, temperature: 30.0}
+  expected_band: [0.6, 1.05]
+
+metric_range: [0.0, 1.2]   # wet `dynamic_phenotype` settled-level range
+
+# No expos artifact injectors: wet noise is injected in the reader; dry observations carry only
+# genuine model error. Intentionally empty (honest boundary).
+simulator: {}
+
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+metrics: [dynamic_phenotype, dynamic_proxy]
+metric_units:
+  dynamic_phenotype: arbitrary_unit
+  dynamic_proxy: dimensionless
+
+# M26 seed claims (verbatim from provider `_SEED_CLAIMS`): the gc_strongdesign family, the
+# genetic-circuit analogue of the M24 b_strongdesign family.
+seed_claims:
+  - {claim_id: gc_strongdesign_dynamic_higher, status: supported, direction: higher,
+     statement: "stronger-design circuits reach a higher settled dynamic phenotype"}
+  - {claim_id: gc_weakdesign_dynamic_higher, status: rejected, direction: lower,
+     statement: "weaker-design circuits reach a higher settled dynamic phenotype"}
+
+execution_kind: dry_compute
+
+observables:
+  - name: wet_dynamic_phenotype
+    metric: dynamic_phenotype
+    description: >-
+      Wet DYNAMIC reporter phenotype derived from the reporter time-series (reader simulator
+      only). SEAM (B): time-series observable schema -- the observation summarises a TRACE
+      (steady state / response amplitude / switching time), not a single scalar reading.
+  - name: dry_dynamic_proxy
+    metric: dynamic_proxy
+    description: >-
+      Dry ODE-simulation proxy of the typed circuit graph (dimensionless); the load-bearing
+      dynamic phenotype scalar (cassette steady state / toggle bistable separation) used for
+      Dry->Wet promotion, not the objective.
+    note: >-
+      TODO(M26): dry metric label not yet a first-class objective metric (same debt as the M24
+      dry proxy). Recorded so it stays machine-visible.
+
+# Acceptance-face debt ledger. The three DYNAMIC faces are proven domain-locally
+# (tests/test_m26_circuit_v01.py); registering them in the shared truth registry + a time-series
+# observable schema is a B seam (docs/bio_seams/M26.md), so they are marked `local` not `landed`.
+acceptance_faces:
+  - {face_name: dynamic_high, truth_profile: dynamic_high, status: declared,
+     test_anchor: "tests/test_m26_circuit_v01.py::test_dynamic_high_face_positive_sign"}
+  - {face_name: dynamic_flipped, truth_profile: dynamic_flipped, status: declared,
+     test_anchor: "tests/test_m26_circuit_v01.py::test_dynamic_flipped_face_negative_sign"}
+  - {face_name: dynamic_flat, truth_profile: dynamic_flat, status: declared,
+     test_anchor: "tests/test_m26_circuit_v01.py::test_dynamic_flat_null_face_no_dynamic"}

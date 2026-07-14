@@ -521,7 +521,7 @@ def test_self_check_clean_on_real_repo():
 
 def test_rule_codes_unique_and_well_formed():
     codes = [r.code for r in lint.RULES]
-    assert len(codes) == len(set(codes)) == 13
+    assert len(codes) == len(set(codes)) == 14
     assert all(r.tier in lint.VALID_TIERS for r in lint.RULES)
 
 
@@ -554,3 +554,20 @@ def test_real_repo_qc_domain_literal_clean():
 
 def test_main_exit_zero_on_real_repo():
     assert lint.main(["--root", str(REPO_ROOT)]) == 0
+
+
+# ---------------------------------------------------------------------------
+# EXP014 —— 中立核心生物盲（Biology Program §4）
+# ---------------------------------------------------------------------------
+def test_exp014_bio_identifier_in_kernel_hit(tmp_path):
+    # kernel 里出现生物域专名标识符 → 必红
+    _write(tmp_path, "expos/kernel/leak.py",
+           "def f(promoter_strength):\n    return promoter_strength\n")
+    assert "EXP014" in _codes(_run(tmp_path, "EXP014"))
+
+
+def test_exp014_capability_and_generic_ok(tmp_path):
+    # 能力常量 sequence_construct（中立 input_kind）+ 通用词 generator 不命中
+    _write(tmp_path, "expos/planner/ok.py",
+           'INPUT = "sequence_construct"\ndef pick(generator):\n    return generator\n')
+    assert "EXP014" not in _codes(_run(tmp_path, "EXP014"))

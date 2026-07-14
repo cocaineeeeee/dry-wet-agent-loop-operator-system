@@ -757,6 +757,63 @@ def _test_anchor_missing(ctx: Context, anchor: str | None) -> str | None:
     return None
 
 
+#: Neutral decision core that MUST stay biology-blind (Biology Program 2026 §4:
+#: kernel / planner / evidence-compiler / knowledge-compiler are domain-neutral;
+#: biology semantics live only in domain / provider / adapter / QC-domain layer).
+#: The five-Team breadth-first era makes this the integration owner's machine gate.
+_EXP014_NEUTRAL_DIRS = ("expos/kernel", "expos/planner")
+_EXP014_NEUTRAL_FILES = (
+    "expos/qc/certification_stats.py",   # the evidence compiler
+    "expos/qc/replicate_collapse.py",    # upstream-of-compiler, domain-agnostic
+)
+#: Unambiguous biology-domain proper nouns. Deliberately EXCLUDES generic tokens
+#: that legitimately appear in the neutral OS (translation=goal->op compile,
+#: expression, construct=reconstruct, gene->generator/GenerationNode). A leak is
+#: an IDENTIFIER named after biology; docstrings/comments are exempt (AST carries
+#: no comment text and we scan identifiers only, never string constants).
+_EXP014_BIO_LITERALS = frozenset({
+    "promoter", "rbs", "cds", "codon", "fluorescence", "gfp", "ribosome",
+    "rnap", "plasmid", "synonymous", "utr",
+})
+#: Capability constants (input_kind values) are NEUTRAL — the peers of
+#: molecular_geometry; never a biology leak.
+_EXP014_EXEMPT_TOKENS = frozenset({"sequence", "construct", "features"})
+
+
+def rule_exp014(ctx: Context) -> list[Finding]:
+    """⑭ Neutral-core biology-neutrality (Biology Program 2026 §4 hard constraint).
+
+    The neutral decision core (kernel / planner / evidence-compiler) must never carry
+    a biology-domain IDENTIFIER -- biology semantics belong in domain/provider/adapter/
+    QC-domain layers. As five biology Teams add domains in parallel (breadth-first),
+    this is the integration owner's mechanical guard that the "kernel stays domain-
+    neutral" M24 abstraction invariant is not silently broken. Identifier-level +
+    whole-token (so ``generator`` does not match a biology literal), docstrings/comments
+    exempt, capability constants (``sequence_construct``) exempt."""
+    findings: list[Finding] = []
+    files: list[Path] = []
+    for d in _EXP014_NEUTRAL_DIRS:
+        files += ctx.py_files(d)
+    for f in _EXP014_NEUTRAL_FILES:
+        p = ctx.root / f
+        if p.is_file():
+            files.append(p)
+    for p in files:
+        tree = ctx.parse(p)
+        if tree is None:
+            continue
+        for ident, lineno in _iter_names(tree):
+            toks = set(re.split(r"[_\W]+", ident.lower()))
+            bad = toks & _EXP014_BIO_LITERALS
+            if bad and not (toks & _EXP014_EXEMPT_TOKENS):
+                findings.append(Finding(
+                    "EXP014", ERROR, ctx.rel(p), lineno,
+                    f"中立核心标识符 `{ident}` 含生物域专名 {sorted(bad)}——kernel/planner/"
+                    "compiler 须生物盲（Biology Program §4），生物语义只许住域/adapter 层",
+                ))
+    return findings
+
+
 def rule_exp013(ctx: Context) -> list[Finding]:
     """⑬ Domain-compliance smoke contract (PREVIEW; REF-M / REF-P2 §Convergence(c),
     nf-core meta_yml reconcile + hassfest declaration<->implementation precedent).
@@ -934,6 +991,9 @@ RULES: list[Rule] = [
          "域合规冒烟契约：加载/绑定/能力对账/锚存在/solvent 回归锚/provider 装载线"
          "（preview 起步）",
          rule_exp013),
+    Rule("EXP014", ERROR, "XD", "expos/{kernel,planner} + evidence-compiler",
+         "中立核心生物盲：kernel/planner/compiler 禁生物域专名标识符（Biology Program §4）",
+         rule_exp014),
 ]
 
 

@@ -555,9 +555,9 @@ def _replicated_domain(tmp_path, n_replicates: int):
 
     base = Path(__file__).resolve().parents[1] / "domains" / "solvent_screen.yaml"
     text = base.read_text()
-    assert "replicates: 3" in text, "domain replicate anchor moved — update the K-E knob"
+    assert "replicates: 8" in text, "domain replicate anchor moved — update the K-E knob"
     out = tmp_path / f"solvent_screen_r{n_replicates}.yaml"
-    out.write_text(text.replace("replicates: 3", f"replicates: {n_replicates}"))
+    out.write_text(text.replace("replicates: 8", f"replicates: {n_replicates}"))
     return out
 
 

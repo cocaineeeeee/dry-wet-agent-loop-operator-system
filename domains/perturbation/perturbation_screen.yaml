@@ -1,0 +1,102 @@
+# M27 perturbation-biology / virtual-cell domain (v0.1, breadth-first pass). Structural
+# sibling of cell_free_expression_screen.yaml: the SAME kernel/planner/qc drive it; only
+# this file + the domain tables (domains/perturbation/*, adapters/models/virtual_cell*)
+# change. Biology is confined to the domain/provider/adapter layer -- the kernel /
+# planner / evidence-compiler never see a knockout/cell-state/axis literal.
+#
+# STAGED (like cell_free_expression_screen before its dry leg was registered): the
+# `input_kind = cell_state_perturbation` and the model-competition dispatch this domain
+# needs are SEAMS owned by integration owner B (docs/bio_seams/M27.md). Until B lands
+# them, full load_domain() rejects this file at the adapter gate ("unknown adapter") --
+# the exact staging precedent. The design_space/objective/provider blocks are already
+# structurally valid and the provider passes birth-time governance domain-locally
+# (tests/test_m27_perturbation_v01.py).
+name: perturbation_screen
+adapter: cell_state_perturbation   # SEAM(B): register in mcl dry dispatch
+
+# M21/M24 domain provider locator. load_domain imports it, runs birth-time governance
+# (check_complete: wet_coords levels == compute_targets keys; the three effect faces
+# non-empty; `flat` null declared; seed claims well-formed) and validate_yaml (the
+# `knockout` choices must equal the provider's knockout levels), and folds its source-hash
+# fingerprint into config_fingerprint.
+provider: domains.perturbation.provider:PerturbationScreenProvider
+
+objective:
+  name: cell_state_response
+  metric: cell_state_response
+  direction: maximize
+  description: >-
+    Magnitude of the cell-state response (delta-from-control) induced by a gene-knockout
+    perturbation. The model-competition layer (adapters/models/virtual_cell*) predicts the
+    per-axis response DISTRIBUTION; only a trusted observation certifies a causal claim.
+
+design_space:
+  name: perturbation_screen
+  variables:
+    # Load-bearing screening dim: the gene knockout. coord = a PUBLIC design descriptor
+    # (relative knockdown-strength proxy), NOT truth. Table transcribed from the provider
+    # (_KNOCKOUTS in domains/perturbation/provider.py).
+    - name: knockout
+      kind: categorical
+      choices: [ko_ctrl0, ko_low1, ko_mid2, ko_mid3, ko_high4, ko_high5]
+      descriptors:
+        ko_ctrl0: {coord: 0.05}
+        ko_low1: {coord: 0.25}
+        ko_mid2: {coord: 0.45}
+        ko_mid3: {coord: 0.60}
+        ko_high4: {coord: 0.80}
+        ko_high5: {coord: 1.00}
+    # Recorded protocol condition (FLAT in the truth surface).
+    - {name: moi, kind: continuous, low: 0.1, high: 1.0, unit: "ratio"}
+
+restrictions: []
+plate: {rows: 8, cols: 12}
+replicates: 8
+# Perturb-seq replicate-independence: each replicate is an INDEPENDENT transduced-cell
+# population (separate infection + readout), so replicates are independent biological
+# evidence. NOTE: re-measuring ONE population across wells would be TECHNICAL replicates
+# and MUST collapse to one biological unit before certification (charter red-line: a
+# technical replicate never masquerades as independent biological evidence).
+replicate_kind: biological
+
+sentinel:
+  n: 2
+  params: {knockout: ko_ctrl0, moi: 0.5}
+  expected_band: [0.0, 0.2]   # control knockout -> near-zero response
+
+metric_range: [0.0, 50.0]     # cell-state response magnitude (L2 of delta)
+simulator: {}
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+metrics: [cell_state_response]
+metric_units:
+  cell_state_response: dimensionless
+
+# M27 seed causal family (transcribed from provider _SEED_CLAIMS): the perturbation
+# analogue of the cell-free b_strongdesign family.
+seed_claims:
+  - {claim_id: p_strongko_shifts_more, status: supported, direction: higher,
+     statement: "a stronger knockout produces a larger cell-state response shift"}
+  - {claim_id: p_weakko_shifts_more, status: rejected, direction: lower,
+     statement: "a weaker knockout produces a larger cell-state response shift"}
+
+execution_kind: dry_compute
+
+observables:
+  - name: cell_state_response
+    metric: cell_state_response
+    description: >-
+      Per-axis cell-state delta-from-control (the response distribution). RETROSPECTIVE
+      replay is benchmark/calibration ONLY (is_wet_observation=False) -- never presented
+      as a wet observation of this run (charter §4).
+
+# Acceptance faces: a positive perturbation-effect face + its flipped mirror + the shared
+# cross-domain `flat` null. STAGED (test anchors are the domain-local v0.1 suite).
+acceptance_faces:
+  - {face_name: perturbation_effect_high, truth_profile: perturbation_effect_high, status: staged,
+     test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}
+  - {face_name: perturbation_effect_flipped, truth_profile: perturbation_effect_flipped, status: staged,
+     test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}
+  - {face_name: flat, truth_profile: flat, status: staged,
+     test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}

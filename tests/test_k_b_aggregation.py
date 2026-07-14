@@ -38,6 +38,7 @@ from expos.kernel.objects import (
 )
 from expos.qc.certification_stats import (
     FILTRATION_ASSUMPTION,
+    W_MIN_REFERENCE_SPAN,
     AggregationConfig,
     AggregationError,
     ClaimHead,
@@ -472,3 +473,122 @@ def test_registered_fn_fails_loudly_on_empty_criterion_inputs():
     never a silent KeyError-shaped verdict at round end."""
     with pytest.raises(AggregationError, match="AggregatedCertification"):
         e_value_round_certification(statistic={}, power={}, criterion_version="v1")
+
+
+# ---------------------------------------------------------------- scale-aware w_min (letter 149)
+#
+# The CS-width eligibility bound w_min is an ABSOLUTE effect-unit quantity calibrated on the
+# chemistry raw scale (span 1.2). A domain that normalizes its readout to percent-of-control
+# ((0, 200)) has genuinely decisive confidence sequences whose width is ~167x larger in
+# absolute units, so a raw 0.5 bound mis-rejects them. AggregationConfig.metric_range makes
+# w_min scale-aware (effective_w_min = w_min * span/W_MIN_REFERENCE_SPAN); at the reference
+# span the factor is exactly 1.0, so chemistry is byte-identical. Sibling of the edge_fire
+# scale-leak fix (qc.checks, letter 147).
+
+
+_PCT_RANGE = (0.0, 200.0)  # biology percent-of-control certification scale (mcl _NORMALIZED_METRIC_RANGE)
+
+
+def _decisive_percent_higher(rng, tag: str, n: int = 8):
+    """A DECISIVE two-arm contrast on the percent-of-control scale: focal ~32%, reference
+    ~1% (a genuine, strong percent-of-control effect). The paired difference is ~31 percent
+    units with small noise -> a tight CS (width ~2) that decisively excludes zero, exactly
+    the letter-149 controls-rerun shape (effect ~30.78, e_product ~1e2-1e3, CI excludes 0)."""
+    fv = [32.0 + float(rng.normal(0, 1.0)) for _ in range(n)]
+    rv = [1.0 + float(rng.normal(0, 1.0)) for _ in range(n)]
+    return _round(fv, rv, tag=tag)
+
+
+def test_effective_w_min_is_byte_identical_at_reference_span():
+    """At the chemistry reference span (the default metric_range) the effective CS-width
+    bound equals the historical absolute 0.5 EXACTLY (IEEE span/span == 1.0), and the pinned
+    threshold set carries that exact value -- the chemistry byte-identity anchor.
+
+    KILL: a scale factor that is not exactly 1.0 at the reference span (e.g. computing the
+    span off a non-(0,1.2) reference) makes effective_w_min != 0.5 -> chemistry drifts."""
+    cfg = AggregationConfig()
+    assert cfg.metric_range == (0.0, W_MIN_REFERENCE_SPAN)
+    assert cfg.effective_w_min == 0.5  # bit-for-bit, not merely approx
+    assert cfg.decision_thresholds()["w_min"] == 0.5
+    # and the scaled bound is the proven letter-149 value on the percent scale.
+    pct = AggregationConfig(metric_range=_PCT_RANGE)
+    assert pct.effective_w_min == 0.5 * (200.0 / 1.2)  # == 83.333..., structurally derived
+    assert pct.decision_thresholds()["w_min"] == pct.effective_w_min  # effective is pinned (auditable)
+
+
+def test_decisive_percent_scale_certifies_supported_with_scale_aware_w_min():
+    """THE DISCRIMINATIVE CRUX (letter 149). A genuinely decisive result on the (0,200)
+    percent-of-control scale -- e_product >> 1/alpha, CI excludes zero, CS width a few
+    percent units -- certifies SUPPORTED once w_min is scale-aware. The SAME evidence under
+    the absolute default bound (0.5) is falsely INSUFFICIENT via the cs-width branch, proving
+    w_min was the sole remaining scale-leak in the eligibility gate.
+
+    KILL: revert metric_range scaling (pin the absolute w_min=0.5 for the percent readout)
+    and this decisive percent-scale evidence is falsely INSUFFICIENT -> red."""
+    scaled = AggregationConfig(metric_range=_PCT_RANGE)
+    absolute = AggregationConfig()  # the old chemistry-implicit bound
+
+    rng = np.random.default_rng(149)
+    _, a1 = aggregate_round(_decisive_percent_higher(rng, "r1"), HEAD, scaled)
+    d_scaled, a2 = aggregate_round(_decisive_percent_higher(rng, "r2"), HEAD, scaled, a1.state)
+
+    # the evidence itself is decisive and identical to what the absolute run would see.
+    assert a2.state.e_product >= scaled.e_threshold  # e over 1/alpha
+    assert d_scaled.provenance.statistic.ci_low > 0.0  # CS excludes zero (positive side)
+    assert 0.5 < a2.report["cs_width"] < scaled.effective_w_min  # too wide for 0.5, fine for 83.33
+    # scale-aware -> SUPPORTED, and the pinned bound is the scaled 83.33 (auditable).
+    assert d_scaled.status is SUP
+    assert d_scaled.new_content is not None and d_scaled.new_content.status is SUP
+    assert d_scaled.provenance.statistic.decision_thresholds["w_min"] == scaled.effective_w_min
+
+    # SAME data, absolute bound -> falsely INSUFFICIENT solely via the CS-width branch.
+    rng = np.random.default_rng(149)
+    _, b1 = aggregate_round(_decisive_percent_higher(rng, "r1"), HEAD, absolute)
+    d_abs, b2 = aggregate_round(_decisive_percent_higher(rng, "r2"), HEAD, absolute, b1.state)
+    assert d_abs.status is INSUF
+    branches = b2.report["insufficient_branches"]
+    assert branches["cs_width_over_w_min"] is True
+    assert branches["cs_contains_zero"] is False  # direction WAS decided; only precision-bound rejected it
+    assert b2.state.e_product == a2.state.e_product  # identical evidence, only the bound differs
+
+
+def test_scale_aware_w_min_is_rescaled_not_disabled():
+    """The gate is RESCALED, not switched off: a CS that is genuinely too wide EVEN on the
+    percent scale (width proportionally large, well over the scaled 83.33 bound) stays
+    INSUFFICIENT. Scale-awareness must not become 'always eligible'.
+
+    KILL: replace effective_w_min with +inf (disable the width gate) and this imprecise
+    percent-scale round is wrongly eligible -> red."""
+    cfg = AggregationConfig(metric_range=_PCT_RANGE)
+
+    def _too_wide_percent(rng, tag, n=6):
+        fv = [60.0 + float(rng.normal(0, 90.0)) for _ in range(n)]
+        rv = [50.0 + float(rng.normal(0, 90.0)) for _ in range(n)]
+        return _round(fv, rv, tag=tag)
+
+    rng = np.random.default_rng(150)
+    _, a1 = aggregate_round(_too_wide_percent(rng, "r1"), HEAD, cfg)
+    delta, a2 = aggregate_round(_too_wide_percent(rng, "r2"), HEAD, cfg, a1.state)
+
+    assert delta.status is INSUF
+    assert a2.report["cs_width"] > cfg.effective_w_min  # wider than the SCALED bound
+    assert a2.report["insufficient_branches"]["cs_width_over_w_min"] is True
+
+
+def test_scale_aware_effective_w_min_replays_from_pinned_snapshot():
+    """K4 self-sufficiency under scaling: the registered replay fn recomputes the SUPPORTED
+    verdict from the persisted snapshot alone, because decision_thresholds pins the EFFECTIVE
+    (scaled) w_min -- no un-pinned scale factor a third party would have to guess."""
+    cfg = AggregationConfig(metric_range=_PCT_RANGE)
+    rng = np.random.default_rng(149)
+    _, a1 = aggregate_round(_decisive_percent_higher(rng, "r1"), HEAD, cfg)
+    delta, _ = aggregate_round(_decisive_percent_higher(rng, "r2"), HEAD, cfg, a1.state)
+    assert delta.status is SUP
+
+    stat = delta.provenance.statistic.model_dump()
+    recomputed = e_value_round_certification(
+        statistic=stat,
+        power={"evidence_factor": stat["evidence_factor"]},
+        criterion_version=delta.provenance.activity.criterion_version,
+    )
+    assert recomputed is delta.status  # replay == verdict, off the pinned effective bound

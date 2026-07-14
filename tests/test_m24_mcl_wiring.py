@@ -431,3 +431,26 @@ def test_percent_of_control_none_without_pair():
     """Only a reference control (no negative+positive pair) -> no percent scale, raw readout."""
     cfg = _bio_cfg_with_controls(roles=("reference",))
     assert _percent_of_control_normalize(cfg, [_cand_obs("c", 1.0, 0)]) is None
+
+
+def test_certification_metric_range_tracks_normalization(tmp_path):
+    """The certification CS-width gate must be calibrated on the SAME scale the readout is
+    normalized to (letter 149). ``certification_metric_range`` returns the percent scale
+    exactly when the domain declares the neg+pos pair that triggers percent-of-control, and
+    the raw ``cfg.metric_range`` otherwise -- so a driver derives a scale-aware
+    AggregationConfig from a DOMAIN FACT, never a hand-scaled w_min. Chemistry stays on its
+    raw range (byte-identical certification), a controls domain lifts to (0, 200)."""
+    from expos.mcl import certification_metric_range
+
+    bio = _bio_cfg_with_controls()  # negative+positive+reference declared -> normalized
+    assert certification_metric_range(bio) == _NORMALIZED_METRIC_RANGE
+    # a controls-less (raw) domain keeps its own metric_range -> effective_w_min unchanged.
+    ref_only = _bio_cfg_with_controls(roles=("reference",))
+    assert certification_metric_range(ref_only) == ref_only.metric_range
+    chem = load_domain(_CATALYST)
+    assert certification_metric_range(chem) == chem.metric_range
+    # end-to-end: the derived range gives the proven scale-aware bound / byte-identical anchor.
+    assert AggregationConfig(metric_range=certification_metric_range(bio)).effective_w_min == (
+        0.5 * (200.0 / 1.2)
+    )
+    assert AggregationConfig(metric_range=certification_metric_range(chem)).effective_w_min == 0.5
