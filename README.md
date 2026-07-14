@@ -1,14 +1,20 @@
-# expos — Adaptive Dry–Wet–Agent Scientific Loop
+# expos — Biology-Primary Adaptive Dry–Wet–Agent Research OS
 
 > 中文版见 [README_ZH.md](README_ZH.md)
 
-**expos** is a **domain-neutral** research OS built around a self-adaptive
-"dry–wet–agent" scientific loop. Its heart is a loop engine that knows nothing
-about any specific science domain: **propose → dry compute → promotion gate →
-wet measurement → evidence compile → claim → knowledge → next proposal**, with
-an agent making adaptive decisions inside it. Changing domain = one domain config
-+ a provider/adapter, with **the kernel / planner / evidence-compiler / ledger /
-knowledge-compiler unchanged byte for byte.**
+**expos** is a research OS whose **primary scientific direction is biology**
+(2026-07-14 strategic pivot), built around a self-adaptive "dry–wet–agent"
+scientific loop. **Biology now drives that loop end to end:** the first
+biological closed loop — cell-free protein expression, **sequence → phenotype →
+claim → knowledge → redesign** — is **double-signed (M24-B, simulation-level).**
+The engine underneath is deliberately **domain-neutral**: a loop that knows
+nothing about any specific science domain (**propose → dry compute → promotion
+gate → wet measurement → evidence compile → claim → knowledge → next proposal**),
+with an agent making adaptive decisions inside it. That biology-agnostic kernel
+is the core design principle — and the two chemistry domains already proved it,
+by running a different domain with **the kernel / planner / evidence-compiler /
+ledger / knowledge-compiler unchanged byte for byte**, which is exactly what now
+lets biology ride the same loop.
 
 **Elevator pitch:**
 - **One closed loop, not a pipeline.** The kernel holds only two persistent
@@ -31,20 +37,75 @@ knowledge-compiler unchanged byte for byte.**
 
 ---
 
-## Research direction & honest status ledger
+## Biology Program (the primary direction)
 
-expos made a **strategic pivot on 2026-07-14: biology becomes the primary
-scientific direction.** The two chemistry domains have already served their most
-important purpose — proving the runtime is domain-swappable; biology is what
-truly forces the system to face new scientific objects (molecule / reaction →
-sequence / construct → expression / phenotype). The authoritative roadmap is
-[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md).
+Biology is where the system stops being a chemistry demo and has to face
+genuinely new scientific objects: **molecule / reaction → sequence / construct →
+expression / phenotype.** That is why the 2026-07-14 ruling made biology the
+primary direction; the two chemistry domains had already served their purpose
+(proving the runtime is domain-swappable). Authoritative roadmap:
+[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md) and
+[`docs/BIOLOGY_PROGRAM_2026.md`](docs/BIOLOGY_PROGRAM_2026.md).
+
+### First biological closed loop — `cell_free_expression_screen` (M24-B, double-signed, simulation-level)
+
+A real dry–wet–agent loop over cell-free protein expression:
+**sequence → phenotype → claim → knowledge → redesign.**
+
+- **Three-state separation on one claim head** (driven by pure phenotype =
+  fluorescence): `expression_high` → **supported** (e-product 102→1033, +0.234);
+  `expression_flipped` → **rejected** (e=42, −0.004); `flat` → **insufficient**
+  (e=0, p=1.0).
+- **Knowledge-fingerprint migration** d04b4d05 → 7f8ce457, driven by wet
+  fluorescence — data self-derives new knowledge, not external injection.
+- **Biology-blind dry leg** — 33 dry observations from sequence proxies / sim,
+  **0 Z-matrix / geometry / PySCF**: the kernel never learns it is doing biology.
+- **Real biological parts** — Anderson promoter ladder (J23100…), RBS, GFP CDS,
+  plus auditable mutation operators (these are *design knowledge / calibration*,
+  not this run's observations).
+- **Double-signed = both certification paths certify:** raw readout +
+  percent-of-control (the controls path via a scale-aware `w_min` fix,
+  effective_w_min 83.33 on the percent scale, e=102→1034, CI widths ≪ w_min).
+- **One caveat kept exactly:** criterion ④ (changed knowledge → next construct)
+  is **mechanism-proven** (flipping the knowledge direction fully reorders the
+  proposal) but does **not self-trigger inside a single low-signal loop** — a
+  real explore/exploit limit, honestly flagged, not a bug.
+
+### Breadth-first: the five-organ Biology-Primary OS (M25–M29, v0.1 skeleton)
+
+Built in parallel as a **vertical-slice skeleton** of the biology OS. Each organ
+is simulation-level; end-to-end wiring awaits the integration owner's shared
+seams (authoritative: `docs/BIOLOGY_PROGRAM_2026.md` §1.5).
+
+| Organ | What | Maturity |
+|---|---|---|
+| **M25 · Design** | generative construct design (sequence proposal) | runnable skeleton |
+| **M26 · Program** | typed genetic-circuit graph + 5-tier verify gate + time-series dynamic faces | more complete — domain-local e2e + 14 tests |
+| **M27 · Perturb** | virtual-cell model tournament + discriminative baseline-gate | more complete — domain-local e2e + 17 tests |
+| **M28 · Understand** | discovery agents (hypothesis / analysis) | runnable skeleton |
+| **M29 · Execute** | protocol → fake physical backend | runnable skeleton |
+
+**Honest boundary.** All biology is **simulation-level** — credible simulated wet
+reads + real *sequence* dry proxies (GC / CAI / RBS / RNA-folding ΔG, honestly
+labelled biased proxies), with **no real wet-lab and no real hardware.** M24-B is
+double-signed only in the sense of *raw + controls certification*; the five
+organs are skeletons/simulations — not a finished product, not double-signed, and
+not yet wired end to end. Public sequence data and parts are used as design
+knowledge / calibration, never as this run's observations.
+
+---
+
+## Honest status ledger
+
+The full per-direction status (biology detailed above; the ledger keeps the
+complete picture incl. chemistry and the real-hardware track):
 
 | Direction | What | Status |
 |---|---|---|
-| **Chemistry (validated foundation)** | solvent screening / catalyst screening, full dry–wet–agent loop; domain-swap existence proof with the same kernel/loop byte-unchanged | ✅ done & countersigned (M16–M22) |
-| **Biology (primary direction) · execution surface** | cell-free protein expression / genetic-construct screening: Domain Contract v3 (`compute_targets → ComputeTarget`, `input_kind` supports `molecular_geometry` / `sequence_construct`); real sequence dry proxies (GC / CAI / RBS / RNA-folding ΔG, all honestly labelled biased proxies, *computed* rather than loop results); three truth faces (expression_high / expression_flipped / flat, by *design* not measured) | ✅ execution surface in place (M24-A) |
-| **Biology · adaptive closed loop** | first real biological loop (`cell_free_expression_screen`): phenotype (fluorescence) → evidence → claim → knowledge. **Three-state separation on one claim head** (expression_high → supported, e-product 102→1033, +0.234; expression_flipped → rejected, e=42, −0.004; flat → insufficient, e=0, p=1.0); **knowledge-fingerprint migration** d04b4d05 → 7f8ce457 driven by wet fluorescence; **biology-blind** dry leg (33 dry obs, sequence-proxy/sim, 0 Z-matrix/geometry/PySCF). **Both paths now certify decisively**: raw readout + percent-of-control, the latter via a scale-aware w_min fix (effective_w_min 83.33 on the percent scale, claim SUPPORTED, e=102→1034, CI widths ≪ w_min). Criterion ④ (knowledge → next construct) remains **mechanism-proven, not self-triggered inside one low-signal loop** | ✅ **double-signed (M24-B): raw + controls both certify** (simulation-level) |
+| **Biology (primary direction) · execution surface** | cell-free protein expression / genetic-construct screening: Domain Contract v3 (`compute_targets → ComputeTarget`, `input_kind` supports `molecular_geometry` / `sequence_construct`); real sequence dry proxies + three truth faces (expression_high / expression_flipped / flat, by *design* not measured) | ✅ execution surface in place (M24-A) |
+| **Biology · adaptive closed loop** | first real biological loop (`cell_free_expression_screen`): phenotype → evidence → claim → knowledge; three-state separation + fingerprint migration + biology-blind dry leg (details above) | ✅ **double-signed (M24-B): raw + controls both certify** (simulation-level) |
+| **Biology · breadth-first five organs** | M25–M29 vertical-slice skeleton of the Biology-Primary OS (Design / Program / Perturb / Understand / Execute); M26/M27 more complete (green tests), M25/M28/M29 runnable skeletons | 🔨 v0.1 skeleton (simulation-level, not yet wired e2e) |
+| **Chemistry (validated foundation / jumping board)** | solvent / catalyst screening, full dry–wet–agent loop; domain-swap existence proof with the same kernel/loop byte-unchanged — this is what proved the runtime can swap to biology | ✅ done & countersigned (M16–M22) |
 | **Real hardware (parallel engineering track)** | transaction-safe semantics for real physical actions — recoverable / re-readable / committable / non-replayable (Real-Wet Readiness Contract) | ✅ ready against a fake physical backend / ❌ real hardware pending; real wet-lab validation ❌ |
 
 > **Honest boundary (please note).** The biology loop now **closes decisively on

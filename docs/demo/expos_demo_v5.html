@@ -157,6 +157,19 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
 .rmparallel .pk{font-family:var(--disp);font-size:14px;color:var(--ink3)}
 .rmparallel .pt{color:var(--ink3)}
 
+/* ============ five-organ breadth ============ */
+.organs{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:6px}
+.organ{background:var(--panel);border:1px solid var(--hair);border-radius:8px;padding:13px 14px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.55;border-top:3px solid var(--know);display:flex;flex-direction:column}
+.organ .ohead{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.organ .obig{font-family:var(--disp);font-size:15px;color:var(--know);line-height:1.24;margin-bottom:8px}
+.organ .obody{color:var(--ink2);flex:1}
+.organ .obadge{margin-top:11px;font-size:10px;letter-spacing:.03em;padding:3px 9px;border-radius:99px;
+  align-self:flex-start;border:1px solid var(--hair);color:var(--ink2)}
+.organ .obadge.tests{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--hair))}
+.organseam{margin-top:18px;font-family:var(--disp);font-size:16px;color:var(--ink2);line-height:1.5;text-wrap:balance;max-width:1090px}
+.organseam b{color:var(--ink);font-weight:600}
+
 /* ============ close ============ */
 #sClose{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .loopline{font-family:var(--mono);font-size:17px;line-height:1.9;color:var(--ink2)}
@@ -400,9 +413,48 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
     <div class="critstate rv d7">The biological loop <b>closes decisively and is double-signed (M24-B)</b> — three-state separation on one claim head (expression_high → supported, e-product 102→1033, +0.234; expression_flipped → rejected, e=42, −0.004; flat → insufficient, e=0, p=1.0) plus a knowledge-fingerprint migration; the percent-of-control (controls) path now certifies too via a scale-aware w_min (effective 83.33 on the percent scale). Proposal reordering (④) stays <b>mechanism-proven, not self-triggered inside a single low-signal loop</b> — the honest caveat that survives the double-sign.</div>
   </section>
 
+  <!-- ================= sOrgans — five-organ breadth-first biology OS ================= -->
+  <section class="scene" id="sOrgans">
+    <div class="kicker">06 · Breadth-first · five organs of a biology-primary OS</div>
+    <h2>Beyond one closed loop: <em>five organs</em> of a biology research OS (M25–M29), each a runnable v0.1 slice — honest about which are load-bearing</h2>
+    <div class="organs">
+      <div class="organ rv d1">
+        <div class="ohead">M25 · Design biology</div>
+        <div class="obig">generative construct</div>
+        <div class="obody">parent → 10 promoter-swap children → expression proxy. An auditable mutation operator that writes candidate constructs.</div>
+        <div class="obadge">runnable skeleton</div>
+      </div>
+      <div class="organ rv d2">
+        <div class="ohead">M26 · Program biology</div>
+        <div class="obig">genetic circuit</div>
+        <div class="obody">typed graph + 5-tier verify gate + time-series dynamic faces (high / flipped / flat phases) — the first move beyond a scalar phenotype.</div>
+        <div class="obadge tests">14 tests</div>
+      </div>
+      <div class="organ rv d3">
+        <div class="ohead">M27 · Perturb biology</div>
+        <div class="obig">virtual-cell tournament</div>
+        <div class="obody">model tournament under a baseline-gate: on scrambled data kNN fails to beat the mean → a negative claim. It truly rejects an expensive model.</div>
+        <div class="obadge tests">17 tests</div>
+      </div>
+      <div class="organ rv d4">
+        <div class="ohead">M28 · Understand biology</div>
+        <div class="obig">discovery agents</div>
+        <div class="obody">Hypothesis / Analysis / Contradiction / Replication agents run ≥2 competing hypotheses → supported vs rejected separate. Agents only emit an evidence ledger — the moat.</div>
+        <div class="obadge">runnable skeleton</div>
+      </div>
+      <div class="organ rv d5">
+        <div class="ohead">M29 · Execute biology</div>
+        <div class="obig">protocol → device_ir</div>
+        <div class="obody">protocol → device_ir → fake liquid handler / plate reader → COMMITTED, reusing the M23 transaction: protocol-to-simulated-physical.</div>
+        <div class="obadge">runnable skeleton</div>
+      </div>
+    </div>
+    <div class="organseam rv d6">M26 and M27 are load-bearing (14 + 17 tests); M25 / M28 / M29 are runnable skeletons. Five organs exist and each runs in isolation — <b>whole-OS integration is the seam still ahead, not a shipped product, and none of the five is double-signed.</b></div>
+  </section>
+
   <!-- ================= sRoad — roadmap ================= -->
   <section class="scene" id="sRoad">
-    <div class="kicker">06 · Roadmap</div>
+    <div class="kicker">07 · Roadmap</div>
     <h2>From a domain-swappable chemistry runtime toward a <em>biology</em> adaptive research OS</h2>
     <div class="roadmap">
       <div class="rmnode done rv d1"><div class="rstage">M16–M20 · done</div><div class="rt">Chemistry Foundation</div>2 domains, kernel untouched</div>
@@ -440,7 +492,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
   <div id="chrome">
     <button id="playbtn" aria-label="Play or pause">▶</button>
     <div id="bar"><div id="track"><div id="fill"></div></div></div>
-    <div id="tlabel">0:00 / 2:53</div>
+    <div id="tlabel">0:00 / 2:58</div>
     <button id="cut" title="Play the ~80s short cut">SHORT CUT</button>
   </div>
 </div></div>
@@ -449,18 +501,19 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
 /* ---------- scene timeline (chemistry + biology numbers captured from final runs; M24-B biology verdicts trace to runs/m24b_bio_nc, raw readout path) ---------- */
 const SCENES = [
   {id:'s0',      t:0,   name:'cold open · loop engine'},
-  {id:'sLoop',   t:13,  name:'the dry-wet-agent loop'},
-  {id:'sChem',   t:35,  name:'chemistry · real result'},
-  {id:'sSwap',   t:57,  name:'domain swap · existence proof'},
-  {id:'sPivot',  t:75,  name:'pivot · biology primary'},
-  {id:'sExec',   t:93,  name:'m24-a · execution surface'},
-  {id:'sLedger', t:117, name:'six criteria · honesty ledger'},
-  {id:'sRoad',   t:139, name:'roadmap · biological OS'},
-  {id:'sClose',  t:157, name:'expos'},
+  {id:'sLoop',   t:12,  name:'the dry-wet-agent loop'},
+  {id:'sChem',   t:32,  name:'chemistry · real result'},
+  {id:'sSwap',   t:50,  name:'domain swap · existence proof'},
+  {id:'sPivot',  t:66,  name:'pivot · biology primary'},
+  {id:'sExec',   t:84,  name:'m24-a · execution surface'},
+  {id:'sLedger', t:106, name:'six criteria · honesty ledger'},
+  {id:'sOrgans', t:128, name:'five organs · biology-primary os'},
+  {id:'sRoad',   t:154, name:'roadmap · biological OS'},
+  {id:'sClose',  t:168, name:'expos'},
 ];
-const TOTAL = 173;   /* < 180s */
-const SHORT = ['s0','sLoop','sChem','sPivot','sLedger','sClose'];
-const SHORT_DUR = {s0:9, sLoop:16, sChem:14, sPivot:13, sLedger:15, sClose:10};
+const TOTAL = 178;   /* < 180s */
+const SHORT = ['s0','sLoop','sChem','sPivot','sLedger','sOrgans','sClose'];
+const SHORT_DUR = {s0:9, sLoop:16, sChem:14, sPivot:13, sLedger:15, sOrgans:16, sClose:10};
 
 /* ---------- per-scene provenance (frozen; every chem number traces to a run; M24-B biology verdicts trace to runs/m24b_bio_nc; architecture items trace to files) ---------- */
 const SOURCE = {
@@ -469,6 +522,7 @@ const SOURCE = {
   sPivot:'Strategy: docs/ROADMAP_BIOLOGY_PRIMARY.md · biology = primary direction (2026-07-14)',
   sExec:'Contract v3: docs/M24_CONTRACT_V3.md · dry proxy: expos/adapters/dry/sequences.py (computed, not a loop result) · truth faces: expos/adapters/wet/sim_reader.py (design, not measured)',
   sLedger:'Source: runs/m24b_bio_nc (cell_free_expression_screen · raw readout path) · three-state verdicts + evidence factors + knowledge fingerprint d04b4d05→7f8ce457 · tests/test_m24_bio_domain.py 12 passed · controls-path certification pending QC rescale',
+  sOrgans:'Source: M25–M29 breadth-first v0.1 · M26 genetic-circuit 14 tests · M27 virtual-cell baseline-gate 17 tests · M25/M28/M29 runnable skeletons · none double-signed · whole-OS integration = open seam (skeleton/simulation-level)',
   sRoad:'Roadmap: docs/ROADMAP_BIOLOGY_PRIMARY.md · M24-B = next milestone · hardware = parallel track (M26)',
 };
 

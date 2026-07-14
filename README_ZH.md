@@ -1,12 +1,15 @@
-# expos —— Adaptive Dry–Wet–Agent Scientific Loop
+# expos —— 生物主线的自适应「干–湿–agent」研究 OS
 
 > English: [README.md](README.md)
 
-> 一个**域中立**的自适应「干–湿–agent」科学闭环研究 OS。核心是一个不懂具体科学域的
-> loop 引擎：**propose → dry compute → promotion gate → wet measurement → evidence
-> compile → claim → knowledge → next proposal**，agent 在其中做自适应决策。换域 =
-> 换一个 domain 配置 + provider/adapter，**kernel / planner / evidence-compiler /
-> ledger / knowledge-compiler 字节不动**。
+> 一个**主研究方向为生物**（2026-07-14 战略转向）的自适应「干–湿–agent」科学闭环研究
+> OS。**生物如今驱动整条 loop**：第一个生物闭环——cell-free 蛋白表达，**sequence →
+> phenotype → claim → knowledge → redesign**——已 **双签（M24-B，simulation 级）**。
+> 底层引擎刻意保持**域中立**：一个不懂具体科学域的 loop（**propose → dry compute →
+> promotion gate → wet measurement → evidence compile → claim → knowledge → next
+> proposal**），agent 在其中做自适应决策。这个生物盲内核是本项目的设计核心——化学两域
+> 已先证明它：换一个域跑通、而 **kernel / planner / evidence-compiler / ledger /
+> knowledge-compiler 字节不动**，正是这一点让生物如今能骑上同一条 loop。
 
 **电梯陈述：**
 - **一个闭环，不是一条管线**：内核只有两个持久科学对象（ExperimentObject /
@@ -23,18 +26,65 @@
 
 ---
 
-## 研究方向与诚实状态台账
+## 生物 Program（当前主研究方向）
 
-expos 于 **2026-07-14 战略转向：生物成为主研究方向**。化学两域已完成其最重要的
-使命——证明 runtime 可换域；生物才真正逼系统面对新科学物件（molecule / reaction →
-sequence / construct → expression / phenotype）。权威路线图见
-[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md)。
+生物是系统从"化学 demo"跨到面对**真正新科学物件**的地方：**molecule / reaction →
+sequence / construct → expression / phenotype**。这正是 2026-07-14 裁决把生物定为主
+方向的原因；化学两域已完成其使命（证明 runtime 可换域）。权威路线图见
+[`docs/ROADMAP_BIOLOGY_PRIMARY.md`](docs/ROADMAP_BIOLOGY_PRIMARY.md) 与
+[`docs/BIOLOGY_PROGRAM_2026.md`](docs/BIOLOGY_PROGRAM_2026.md)。
+
+### 第一个生物闭环——`cell_free_expression_screen`（M24-B，双签，simulation 级）
+
+一条真正的 dry–wet–agent 闭环，跑 cell-free 蛋白表达：
+**sequence → phenotype → claim → knowledge → redesign**。
+
+- **同一 claim head 三态分离**（由纯 phenotype = 荧光驱动）：`expression_high` →
+  **supported**（e-product 102→1033，+0.234）；`expression_flipped` → **rejected**
+  （e=42，−0.004）；`flat` → **insufficient**（e=0，p=1.0）。
+- **知识指纹迁移** d04b4d05 → 7f8ce457，由 wet 荧光驱动——数据自推导出新知识，而非
+  外部注入。
+- **生物盲 dry 腿**——33 条 dry 观测来自序列 proxy / sim，**0 条 Z-matrix / geometry
+  / PySCF**：内核始终不知道自己在做生物。
+- **真实生物元件**——Anderson promoter 梯（J23100…）、RBS、GFP CDS，以及可审计的变异
+  算子（这些是*设计知识 / 校准*，不是本 run 的观测）。
+- **双签 = 两条认证路径均认证**：raw readout + percent-of-control（controls 路径经
+  scale-aware `w_min` 修，percent scale 下 effective_w_min 83.33，e=102→1034，CI 宽
+  ≪ w_min）。
+- **一条 caveat 一字保留**：判准 ④（被改的知识 → 下一轮 construct）是**机制证明**
+  （翻转知识方向会完全重排提案），但在单条低信号 loop 内**不会自发触发**——真实的
+  explore/exploit 结构限制，如实标注，不是 bug。
+
+### breadth-first：五器官 Biology-Primary OS（M25–M29，v0.1 骨架）
+
+作为生物 OS 的 **vertical-slice 骨架**并行建成。各器官均 simulation 级；整环 e2e 接线
+待 integration owner 的共享 seam（权威见 `docs/BIOLOGY_PROGRAM_2026.md` §1.5）。
+
+| 器官 | 内容 | 成熟度 |
+|---|---|---|
+| **M25 · Design** | generative construct 设计（序列提案） | runnable skeleton |
+| **M26 · Program** | typed 基因线路图 + 5-tier verify gate + 时序动态 faces | 较完整——域本地 e2e + 14 测试 |
+| **M27 · Perturb** | virtual-cell model tournament + discriminative baseline-gate | 较完整——域本地 e2e + 17 测试 |
+| **M28 · Understand** | discovery agents（假设 / 分析） | runnable skeleton |
+| **M29 · Execute** | protocol → 假物理后端 | runnable skeleton |
+
+**诚实边界**：全部生物为 **simulation 级**——可信仿真 wet 读 + 真*序列* dry proxy（GC
+/ CAI / RBS / RNA-folding ΔG，诚实标注为 biased proxy），**无真湿实验、无真机**。
+M24-B 的"双签"仅指 *raw + controls 认证*；五器官为 skeleton/simulation——不是成品、
+未双签、尚未整环接线。公开序列数据/元件用作设计知识 / 校准，绝不当本 run 观测。
+
+---
+
+## 诚实状态台账
+
+逐方向完整状态（生物细节见上；台账保留含化学与真机支线的完整图景）：
 
 | 方向 | 内容 | 状态 |
 |---|---|---|
-| **化学（已验证的基础）** | solvent screening / catalyst screening 两域，走完整 dry–wet–agent 闭环；同一 kernel/loop 字节不动完成换域存在性证明 | ✅ 已跑通、双签（M16–M22） |
-| **生物（当前主研究方向）· 执行面** | cell-free 蛋白表达 / 基因构件筛选：Domain Contract v3（`compute_targets → ComputeTarget`，`input_kind` 支持 `molecular_geometry` / `sequence_construct`）；真实序列 dry proxy（GC / CAI / RBS / RNA-folding ΔG，全部诚实标注为 biased proxy，computed 而非 loop 结果）；三真值面（expression_high / expression_flipped / flat，design 而非 measured） | ✅ 执行面就位（M24-A） |
-| **生物 · 自适应闭环** | 第一个真正的生物闭环（`cell_free_expression_screen`）：phenotype（荧光）→ evidence → claim → knowledge。**同一 claim head 三态分离**（expression_high → supported，e-product 102→1033，+0.234；expression_flipped → rejected，e=42，−0.004；flat → insufficient，e=0，p=1.0）；wet 荧光驱动的**知识指纹迁移** d04b4d05 → 7f8ce457；**生物盲** dry 腿（33 条 dry 观测，sequence-proxy/sim，0 条 Z-matrix/geometry/PySCF）。**两条路径现均决定性认证**：raw readout + percent-of-control，后者经 scale-aware w_min 修（percent scale 下 effective_w_min 83.33，claim SUPPORTED，e=102→1034，CI 宽 ≪ w_min）。判准 ④（knowledge → 下一轮 construct）仍为**机制证明，闭环内低信号区未自发触发** | ✅ **双签（M24-B）：raw + controls 双路径均认证**（simulation 级） |
+| **生物（当前主研究方向）· 执行面** | cell-free 蛋白表达 / 基因构件筛选：Domain Contract v3（`compute_targets → ComputeTarget`，`input_kind` 支持 `molecular_geometry` / `sequence_construct`）；真实序列 dry proxy + 三真值面（expression_high / expression_flipped / flat，design 而非 measured） | ✅ 执行面就位（M24-A） |
+| **生物 · 自适应闭环** | 第一个真正的生物闭环（`cell_free_expression_screen`）：phenotype → evidence → claim → knowledge；三态分离 + 指纹迁移 + 生物盲 dry 腿（细节见上） | ✅ **双签（M24-B）：raw + controls 双路径均认证**（simulation 级） |
+| **生物 · breadth-first 五器官** | M25–M29 Biology-Primary OS 的 vertical-slice 骨架（Design / Program / Perturb / Understand / Execute）；M26/M27 较完整（测试绿），M25/M28/M29 runnable skeleton | 🔨 v0.1 骨架（simulation 级，尚未整环接线） |
+| **化学（已验证的基础 / 跳板）** | solvent / catalyst screening 两域，走完整 dry–wet–agent 闭环；同一 kernel/loop 字节不动完成换域存在性证明——正是这一点证明了 runtime 能换到生物 | ✅ 已跑通、双签（M16–M22） |
 | **真机（平行工程支线）** | 真实物理动作的可恢复 / 可回读 / 可提交 / 不可重放事务语义（Real-Wet Readiness Contract） | ✅ 就绪 against fake physical backend / ❌ real hardware pending；real wet-lab validation ❌ |
 
 > **诚实边界（务必留意）**：生物闭环现已在 **两条认证路径上均决定性跑通**（M24-B，
