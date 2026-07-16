@@ -246,5 +246,128 @@ def test_replication_rejects_technical_masquerade():
     assert v.n_technical == 3
 
 
+# --------------------------------------------------- mcl bridge seam (DiscoveryCertification)
+# The M28 -> mcl entry point: a CertificationPolicy-conforming adapter B drops into the
+# existing ``mcl._certify_round`` (which calls ``.decide(...) -> (deltas, state)`` then owns
+# the single ``apply_claim_deltas`` mutation). These tests exercise the bridge interface B
+# connects to, without importing mcl (structural conformance + the kernel apply path).
+
+
+from types import SimpleNamespace
+
+from expos.kernel.claims import apply_claim_deltas
+from expos.kernel.objects import TrustLevel
+from expos.planner.certification import CertificationPolicy
+from agents.biology_discovery.certification import DiscoveryCertification, DiscoveryVerdict
+
+
+def _fake_adjudicated(obs_id: str, trust: TrustLevel):
+    """A minimal ObservationObject stand-in carrying only what the trust cross-check reads
+    (``obs_id`` + ``trust``) — the adapter uses getattr, so no full kernel object needed."""
+    return SimpleNamespace(obs_id=obs_id, trust=trust)
+
+
+def _staged_three(ctx=None):
+    """Stage a competing pair (up/down, both trusted, true increase) + an untrusted verdict
+    on a second axis — the three-way discriminative fixture, shared by the bridge tests."""
+    from dataclasses import replace
+
+    ctx = ctx or _context()
+    hset = HypothesisAgent().pose(ctx)
+    h_up, h_down = hset.by_direction(+1), hset.by_direction(-1)
+    obs_up = _trusted_increase_obs(h_up)
+    obs_down = _trusted_increase_obs(h_down)
+
+    h_y = replace(h_up, axis="axis_y", claim_id=make_claim_id("KO_TEST", "axis_y", +1))
+    obs_unt = DeterministicAnalysisBackend().analyse(
+        h_y, make_assay_dataset("KO_TEST", "axis_y", true_effect=3.0, seed=2)
+    )  # trusted stays False
+    verdicts = [
+        DiscoveryVerdict(h_up, obs_up),
+        DiscoveryVerdict(h_down, obs_down),
+        DiscoveryVerdict(h_y, obs_unt),
+    ]
+    return h_up, h_down, h_y, verdicts
+
+
+def test_discovery_certification_conforms_to_certification_policy_protocol():
+    cert = DiscoveryCertification([])
+    # runtime_checkable structural conformance to the seventh planner-injection element
+    assert isinstance(cert, CertificationPolicy)
+    assert cert.name == "discovery_certification"
+    assert callable(cert.decide)
+
+
+def test_discovery_certification_decide_returns_deltas_and_mutates_nothing():
+    _, _, _, verdicts = _staged_three()
+    cert = DiscoveryCertification(verdicts)
+    ledger = Ledger()
+    before = ledger.canonical_json()
+    deltas, state = cert.decide([], ledger, None, 0, "sha256:kfp")
+    # decide is the PROPOSAL half: it returns ClaimDeltas + passes state through, mutating
+    # nothing (mcl._certify_round owns the apply — the kernel gate stays the sole mutator).
+    assert all(isinstance(d, ClaimDelta) for d in deltas)
+    assert len(deltas) == 3
+    assert state is None
+    assert ledger.canonical_json() == before
+
+
+def test_discovery_certification_bridge_three_state_separation_via_kernel_gate():
+    """>=2 competing hypotheses adjudicated through the bridge -> real kernel apply:
+    up SUPPORTED, down REJECTED, untrusted INSUFFICIENT (non-mutating)."""
+    _, _, _, verdicts = _staged_three()
+    cert = DiscoveryCertification(verdicts)
+    deltas, _ = cert.decide([], Ledger(), None, 0, "sha256:kfp")
+    # land them exactly as mcl._certify_round would
+    ledger, report = apply_claim_deltas(Ledger(), deltas)
+
+    statuses = ledger.effective_statuses()
+    up_id = make_claim_id("KO_TEST", "axis_x", +1)
+    down_id = make_claim_id("KO_TEST", "axis_x", -1)
+    y_id = make_claim_id("KO_TEST", "axis_y", +1)
+    assert statuses[up_id] is ClaimDecisionStatus.SUPPORTED
+    assert statuses[down_id] is ClaimDecisionStatus.REJECTED
+    assert y_id not in statuses  # insufficient never becomes a head (K3)
+    y_outcome = next(o for o in report.outcomes if o.target_claim_id == y_id)
+    assert y_outcome.final_status is ClaimDecisionStatus.INSUFFICIENT
+    assert y_outcome.mutated_effective_status is False
+
+
+def test_discovery_certification_threads_run_knowledge_fingerprint():
+    """Seam #6: the delta provenance chains to the RUN's compiled-knowledge fingerprint that
+    mcl passes into decide(), not the domain-local projection (K4 chain closes on B's ledger)."""
+    _, _, _, verdicts = _staged_three()
+    cert = DiscoveryCertification(verdicts)
+    run_kfp = "sha256:run-compiled-knowledge-fingerprint"
+    deltas, _ = cert.decide([], Ledger(), None, 3, run_kfp)
+    for d in deltas:
+        assert d.provenance.usage.consumed_knowledge_fingerprint == run_kfp
+
+
+def test_discovery_certification_trust_gate_downgrades_qc_rejected_observation():
+    """The certified stream can only REMOVE trust: an observation the QC stream saw and did
+    NOT mark TRUSTED is forced untrusted -> INSUFFICIENT; a TRUSTED one stays SUPPORTED."""
+    h_up, _, _, verdicts = _staged_three()
+    up_verdict = verdicts[0]  # trusted, true increase
+    join_id = up_verdict.observation.observation_id
+
+    # (a) QC marked it SUSPECT -> the gate downgrades -> INSUFFICIENT (non-mutating)
+    cert = DiscoveryCertification([up_verdict])
+    deltas, _ = cert.decide(
+        [_fake_adjudicated(join_id, TrustLevel.SUSPECT)], Ledger(), None, 0, "sha256:k"
+    )
+    assert deltas[0].status is ClaimDecisionStatus.INSUFFICIENT
+
+    # (b) QC marked it TRUSTED -> stands -> SUPPORTED
+    deltas_ok, _ = cert.decide(
+        [_fake_adjudicated(join_id, TrustLevel.TRUSTED)], Ledger(), None, 0, "sha256:k"
+    )
+    assert deltas_ok[0].status is ClaimDecisionStatus.SUPPORTED
+
+    # (c) absent from the stream -> honor B's flag (seam #1) -> SUPPORTED
+    deltas_absent, _ = cert.decide([], Ledger(), None, 0, "sha256:k")
+    assert deltas_absent[0].status is ClaimDecisionStatus.SUPPORTED
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

@@ -35,8 +35,12 @@ from domains.perturbation.objects import (
 )
 from domains.perturbation.provider import PerturbationScreenProvider
 from domains.perturbation.run_v01 import real_benchmark_crosscheck, run_regime
-from expos.adapters.domain_provider import DomainProvider
+from expos.adapters.domain_provider import (
+    INPUT_KIND_CELL_STATE_PERTURBATION,
+    DomainProvider,
+)
 from expos.adapters.models import (
+    CellStatePerturbationAdapter,
     EnsembleBackend,
     KNNResponseBackend,
     LinearResponseBackend,
@@ -45,6 +49,7 @@ from expos.adapters.models import (
     solve_y_axb,
 )
 from expos.adapters.models.virtual_cell import BioModelBackend, PerturbationBatch
+from expos.domain import load_domain
 
 
 # --------------------------------------------------------------- backends & distribution
@@ -408,3 +413,113 @@ def test_real_benchmark_crosscheck_report_is_honest():
     assert rep["replogle_rpe1_essential"]["is_wet_observation"] is False
     assert rep["replogle_rpe1_essential"]["any_method_cleared"] is False
     assert "no method clears" in rep["conclusion"]
+
+
+# --------------------------------------------------------------- yaml loadability (M27 handoff a)
+
+
+def test_perturbation_yaml_passes_config_validation():
+    """The perturbation_screen.yaml acceptance_faces status is a LEGAL enum (declared),
+    so DomainConfig validation no longer rejects it on the illegal-enum gate. Full
+    load_domain() still stops at the adapter gate until B registers the dry leg in
+    ADAPTER_REGISTRY (the documented staging seam) -- that rejection is NOT the enum one."""
+    from pathlib import Path
+
+    import yaml
+
+    from expos.domain import DomainConfig, DomainError
+
+    raw = yaml.safe_load(
+        Path("domains/perturbation/perturbation_screen.yaml").read_text(encoding="utf-8")
+    )
+    cfg = DomainConfig.model_validate(raw)
+    assert cfg.name == "perturbation_screen"
+    assert cfg.adapter == "cell_state_perturbation"
+    # every acceptance face carries a legal status ({declared, landed}); none is `staged`.
+    assert cfg.acceptance_faces is not None
+    assert {f.status for f in cfg.acceptance_faces} <= {"declared", "landed"}
+    assert all(f.status != "staged" for f in cfg.acceptance_faces)  # the fixed illegal value
+
+    # load_domain now fails (if at all) at the adapter gate, NOT the enum gate.
+    try:
+        load_domain("domains/perturbation/perturbation_screen.yaml")
+    except DomainError as e:
+        assert "staged" not in str(e)
+        assert "status" not in str(e)  # not an acceptance-face-status validation error
+
+
+# --------------------------------------------------------------- dry competition leg (M27 handoff b)
+
+
+def _dataset(regime, n_pert=60, n_ood=6):
+    return make_replay_dataset(seed=27, n_pert=n_pert, regime=regime, n_ood=n_ood)
+
+
+def test_adapter_capability_matches_central_input_kind():
+    """The dry leg's capability equals the central input_kind constant B landed, so B's
+    dry-dispatch registration keys straight onto it (charter: neutral capability, no domain
+    literal in the kernel)."""
+    ad = CellStatePerturbationAdapter()
+    assert ad.name == "cell_state_perturbation"
+    assert ad.ACCEPTS_INPUT_KINDS == (INPUT_KIND_CELL_STATE_PERTURBATION,)
+
+
+def test_dry_leg_emits_negative_claim_when_complex_does_not_beat_baseline():
+    """THE handoff-(b) discriminative case: on the SCRAMBLED regime the complex backend
+    cannot beat the baseline, so the dry competition leg emits a FIRST-CLASS negative claim
+    for it (baseline-gate hard gate; negative is knowledge, not failure)."""
+    ad = CellStatePerturbationAdapter()
+    result = ad.compete_from_dataset(_dataset("scrambled"), round_index=0)
+
+    # no expensive proposer is admitted on scrambled data...
+    assert result.admitted == []
+    # ...and every candidate (incl. the complex knn) yields a first-class negative claim.
+    assert result.has_negative is True
+    knn_neg = [n for n in result.negative_claims if n["claim_id"].endswith("knn_response_not_over_baseline")]
+    assert len(knn_neg) == 1
+    nc = knn_neg[0]
+    assert nc["status"] == "rejected"
+    assert nc["kind"] == "baseline_gate_negative"
+    assert nc["round_index"] == 0
+    assert "did not significantly" in nc["statement"]
+
+
+def test_dry_leg_admits_complex_when_it_genuinely_beats_baseline():
+    """The gate is NOT an always-negative rubber stamp: on the INFORMATIVE regime the
+    complex knn backend clears and is admitted (and carries no negative claim)."""
+    ad = CellStatePerturbationAdapter()
+    result = ad.compete_from_dataset(_dataset("informative"), round_index=0)
+    assert "knn_response" in result.admitted
+    assert all(
+        "knn_response_not_over_baseline" not in n["claim_id"] for n in result.negative_claims
+    )
+
+
+def test_dry_leg_drives_competition_each_round_with_provenance():
+    """The leg drives score_backend + baseline_gate per round and stamps each round's
+    verdicts + backend weight-hash fingerprints (charter obligation #1)."""
+    ad = CellStatePerturbationAdapter()
+    ds = _dataset("informative")
+    r0 = ad.compete_from_dataset(ds, round_index=0)
+    # a baseline is present in the roster (the gate has something to gate against), and
+    # every non-baseline proposer got a verdict.
+    assert {"mean_baseline", "linear_response"} <= set(r0.scores)
+    non_baseline = {v.backend for v in r0.verdicts}
+    assert non_baseline == {"knn_response", "pathway_informed", "ensemble"}
+    # provenance: each backend carries a name@version#sha256 fingerprint.
+    assert all("#sha256:" in fp for fp in r0.backend_fingerprints.values())
+    # re-fitting on different data (different regime) flips the complex backend fingerprint.
+    r_scr = ad.compete_from_dataset(_dataset("scrambled"), round_index=0)
+    assert r0.backend_fingerprints["knn_response"] != r_scr.backend_fingerprints["knn_response"]
+
+
+def test_dry_leg_never_certifies_a_claim():
+    """The competition leg emits only DRY evidence: every claim it produces is a REJECTED
+    baseline-gate negative -- it never emits a `supported` biological claim (only a trusted
+    observation certifies, charter §4)."""
+    ad = CellStatePerturbationAdapter()
+    for regime in ("informative", "scrambled"):
+        result = ad.compete_from_dataset(_dataset(regime))
+        for nc in result.negative_claims:
+            assert nc["status"] == "rejected"
+            assert nc["kind"] == "baseline_gate_negative"

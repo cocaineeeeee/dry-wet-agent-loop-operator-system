@@ -27,6 +27,13 @@ from expos.adapters.models.virtual_cell_complex import KNNResponseBackend
 from expos.adapters.models.virtual_cell_ensemble import EnsembleBackend
 from expos.adapters.models.virtual_cell_pathway import PathwayInformedBackend
 
+# The dry model-competition leg (imported last: it depends on the backend submodules
+# above, which are fully bound by this point, so this is not a circular import).
+from expos.adapters.models.cell_state_adapter import (
+    CellStatePerturbationAdapter,
+    CompetitionRoundResult,
+)
+
 __all__ = [
     "BioModelBackend",
     "PerturbationBatch",
@@ -37,4 +44,6 @@ __all__ = [
     "PathwayInformedBackend",
     "EnsembleBackend",
     "solve_y_axb",
+    "CellStatePerturbationAdapter",
+    "CompetitionRoundResult",
 ]

@@ -284,3 +284,106 @@ def test_negative_surface_face_is_representable():
                      face=NEGATIVE_FACE, strategy="greedy", k=4)
     # on the flipped surface the high-coord dry-top expresses LOW -> not supported
     assert r.status in ("rejected", "insufficient")
+
+
+# --------------------------------------------------- loadable DomainProvider + yaml
+#
+# The birth-time-governed contract face B loads (expos/adapters/providers/
+# generative_construct.py + domains/generative_construct/generative_construct.yaml).
+# Distinct from the domain-local organ provider tested above.
+
+from expos.adapters.domain_provider import (  # noqa: E402
+    INPUT_KIND_SEQUENCE_CONSTRUCT,
+    DomainProvider,
+    DomainProviderError,
+)
+from expos.adapters.providers.generative_construct import (  # noqa: E402
+    GenerativeConstructProvider as LoadableGenerativeConstructProvider,
+)
+from expos.domain import load_domain  # noqa: E402
+
+_YAML = "domains/generative_construct/generative_construct.yaml"
+
+
+def test_loadable_provider_is_a_domain_provider_and_passes_governance():
+    """check_complete() enforces the cross-hook invariants (wet_coords keys ==
+    compute_targets keys, non-empty faces, null faces are declared faces, seed
+    claims well-formed) and returns a validated instance."""
+    assert issubclass(LoadableGenerativeConstructProvider, DomainProvider)
+    inst = LoadableGenerativeConstructProvider.check_complete()  # LOUD on any violation
+    assert isinstance(inst, LoadableGenerativeConstructProvider)
+    assert inst.domain_name == "generative_construct"
+
+
+def test_loadable_provider_compute_targets_match_wet_coords_and_are_sequence_construct():
+    prov = LoadableGenerativeConstructProvider()
+    ct, wc = prov.compute_targets(), prov.wet_coords()
+    # the load-bearing check_complete invariant, asserted directly
+    assert set(ct) == set(wc)
+    assert set(ct) == set(construct_names())          # the 11 catalogue lineage roots
+    # geometry-free: every base target is a sequence_construct (NO molecular geometry)
+    for t in ct.values():
+        assert t.input_kind == INPUT_KIND_SEQUENCE_CONSTRUCT
+        assert t.adapter_capability == INPUT_KIND_SEQUENCE_CONSTRUCT
+        assert "sequence" in t.payload
+
+
+def test_load_domain_accepts_the_yaml():
+    """Full load_domain() passes: adapter gate (sequence_proxy registered) + provider
+    governance (check_complete) + validate_yaml + config_fingerprint provider fold."""
+    cfg = load_domain(_YAML)
+    assert cfg.name == "generative_construct"
+    assert cfg.adapter == "sequence_proxy"
+    # the provider was imported, governed, and attached
+    assert isinstance(cfg._provider, LoadableGenerativeConstructProvider)
+    # seed_claims/controls/acceptance_faces round-tripped
+    assert {c.claim_id for c in cfg.seed_claims} == {
+        "b_strongdesign_expresses_higher", "b_weakdesign_expresses_higher",
+    }
+    assert {f.status for f in cfg.acceptance_faces} == {"landed"}
+
+
+def test_validate_yaml_rejects_a_construct_choice_mismatch():
+    """A yaml declaring a construct the provider cannot realise is a LOUD rejection."""
+    cfg = load_domain(_YAML)
+    prov = LoadableGenerativeConstructProvider()
+    # tamper: drop the strong preset from the categorical choices
+    var = next(v for v in cfg.design_space.variables if v.name == "construct")
+    object.__setattr__(var, "choices", [c for c in var.choices if c != "j23100"])
+    with pytest.raises(DomainProviderError):
+        prov.validate_yaml(cfg)
+
+
+def test_propose_candidates_seam_mints_child_sequence_construct_targets():
+    """B's per-round fold: parent level -> child sequence_construct ComputeTargets.
+    Children are content-addressed, never the parent id, same input_kind as M24."""
+    prov = LoadableGenerativeConstructProvider()
+    kids = prov.propose_candidates("j23103", seed=0)
+    assert kids                                        # a non-empty operator child pool
+    assert "j23103" not in kids                        # never reuses the parent id
+    for cid, t in kids.items():
+        assert t.input_kind == INPUT_KIND_SEQUENCE_CONSTRUCT
+        assert t.payload["sequence"] == t.payload.get("promoter", "") + \
+            t.payload.get("rbs", "") + t.payload.get("cds", "")
+    # deterministic given (parent, seed)
+    again = prov.propose_candidates("j23103", seed=0)
+    assert set(kids) == set(again)
+
+
+def test_propose_candidates_accepts_arbitrary_parent_components():
+    """B can grow deeper generations by passing a prior candidate's components."""
+    prov = LoadableGenerativeConstructProvider()
+    comp = components_for("j23106")
+    kids = prov.propose_candidates("gen1_x", seed=0, parent_components=comp)
+    assert kids
+    assert "gen1_x" not in kids
+
+
+def test_operator_fingerprint_seam_is_stable_and_distinct_from_provider_fp():
+    prov = LoadableGenerativeConstructProvider()
+    op_fp = prov.operator_fingerprint()
+    assert op_fp.startswith("sha256:")
+    assert prov.operator_fingerprint() == op_fp        # stable
+    assert op_fp == module_fingerprint()               # it IS the operator module hash
+    # the operator hash is a SEPARATE fold from this provider module's own hash
+    assert op_fp not in prov.provider_fingerprint()

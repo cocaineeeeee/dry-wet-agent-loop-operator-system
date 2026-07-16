@@ -1,0 +1,189 @@
+# M25 generative_construct domain -- the LOADABLE "Design" organ (Team M25).
+#
+# Structural sibling of cell_free_expression_screen.yaml: the SAME kernel / planner /
+# qc / scheduler drive it; only this file + the provider change. Biology is confined to
+# the domain/provider/adapter/leaf layer -- the kernel/planner/evidence-compiler never
+# see a construct/promoter/rbs/sequence literal (the domain-neutral-kernel hard gate).
+#
+# WHAT MAKES THIS THE *GENERATIVE* ORGAN (vs the fixed-pool M24 screen): the yaml
+# design_space is the FIXED categorical of the 11 public catalogue presets -- these are
+# the lineage ROOTS, the loadable base pool that compute_targets/wet_coords agree on at
+# birth (provider.check_complete). The generative growth is a RUNTIME act: the
+# integration owner (B) calls provider.propose_candidates(parent, seed) each round to
+# expand a parent into a five-operator CHILD pool that is merged into the mcl candidate
+# pool (fold-in point declared in docs/bio_seams/M25.md #1). Generated children are
+# content-addressed and minted per round; they never appear here.
+#
+# DUAL-LEG (M16 §1 / G4): one design space, two independent legs, exactly as
+# cell_free_expression_screen:
+#   * dry leg  (adapter: sequence_proxy, out-of-band via --loop mcl) -> metric
+#     `expression_proxy` (dimensionless [0,1] sequence-feature proxy: GC/CAI/RBS/
+#     folding). It carries REAL approximation error and is deliberately BLIND to a
+#     promoter's measured transcriptional strength -- the mechanistically honest gap the
+#     M25 discriminative "dry ranking overturned by wet" case rides on
+#     (domains/generative_construct/wet_truth.py). NO molecular geometry.
+#   * wet leg  -> metric `expression_fluorescence` (a.u.). SIMULATION (honest label):
+#     domains/generative_construct/wet_truth.py realises the construct's TRUE expression
+#     coordinate (dominated by promoter functional strength) on the SHARED, domain-
+#     neutral TruthSurface (profile `expression_high`). The real wet path swaps in the
+#     socket sim_reader truth face (the faces already exist) -- no sim_reader change.
+#
+# `adapter: sequence_proxy` names the dry screening leg (already REGISTERED in
+# domain.ADAPTER_REGISTRY as a dual-leg dry adapter -- same as the M24 screen), so full
+# load_domain() accepts this file at the adapter gate.
+name: generative_construct
+adapter: sequence_proxy
+
+# M21/M25 domain provider: load_domain imports it, runs birth-time governance
+# (check_complete: wet_coords levels == compute_targets keys, the three expression faces
+# non-empty, `flat` null declared, seed claims well-formed) and validate_yaml (the
+# `construct` choices must equal the provider's CONSTRUCTS levels), and folds its
+# source-hash fingerprint into config_fingerprint. Consolidation-by-reference: the
+# provider returns the same leaf tables (CONSTRUCTS / CONSTRUCT_DESCRIPTORS /
+# TRUTH_PROFILES) the leaf modules hold, plus the generative seam
+# (propose_candidates / operator_fingerprint) B folds.
+provider: expos.adapters.providers.generative_construct:GenerativeConstructProvider
+
+objective:
+  name: expression_fluorescence
+  metric: expression_fluorescence
+  direction: maximize
+  description: >-
+    Wet plate-reader fluorescence (reporter expression proxy, a.u.) from a prepared
+    cell-free construct. Hidden truth is a unimodal Gaussian in the realised normalized
+    construct design coordinate (SIMULATED reader profile `expression_high`); the
+    response surface lives only in the wet simulator (wet_truth.py). The dry leg reports
+    a separate `expression_proxy` channel (sequence features) used for Dry->Wet
+    promotion, not as this objective directly.
+
+design_space:
+  name: generative_construct
+  variables:
+    # Load-bearing screening dim: the 11 public catalogue presets (Anderson promoter
+    # relative strengths), the GENERATIVE LINEAGE ROOTS. choices must equal the
+    # provider's CONSTRUCTS (validate_yaml). Coordinates transcribed verbatim from
+    # adapters/dry/constructs.CONSTRUCT_DESCRIPTORS (public design knowledge, NOT truth).
+    - name: construct
+      kind: categorical
+      choices: [j23100, j23102, j23104, j23101, j23106, j23110, j23105, j23116, j23114, j23117, j23103]
+      descriptors:
+        j23100: {coord: 1.0}
+        j23102: {coord: 0.86}
+        j23104: {coord: 0.72}
+        j23101: {coord: 0.7}
+        j23106: {coord: 0.47}
+        j23110: {coord: 0.33}
+        j23105: {coord: 0.24}
+        j23116: {coord: 0.16}
+        j23114: {coord: 0.1}
+        j23117: {coord: 0.06}
+        j23103: {coord: 0.01}
+    # Recorded protocol conditions: actuated/validated on the wet protocol and carried
+    # through custody, but FLAT in the truth surface (design-coordinate-only). Standard
+    # cell-free (CFPS) protocol windows.
+    - {name: incubation_time, kind: continuous, low: 30.0, high: 240.0, unit: "min"}
+    - {name: temperature, kind: continuous, low: 25.0, high: 37.0, unit: "C"}
+
+restrictions: []
+
+# 96-well plate matches the wet plate-reader labware.
+plate: {rows: 8, cols: 12}
+
+# Wet MULTI-REPLICATE substrate count (M17 K-F): >=~6 pairs/round for a decisive
+# certification. Each replicate well is an INDEPENDENT cell-free reaction (see below).
+replicates: 8
+# Replicate-independence declaration (bio ruling ③): `biological` -- each replicate well
+# is an independent cell-free reaction (separate master-mix aliquot), so they reach the
+# evidence compiler at full n (byte-identical to the chemistry independent-replicate
+# behaviour). If a future protocol re-measures ONE reaction across wells, those are
+# TECHNICAL replicates and MUST be collapsed by expos.qc.replicate_collapse first.
+replicate_kind: biological
+
+# CALIBRATION SENTINEL: a strong-design lineage-root preset (J23100) near the
+# `expression_high` truth optimum, the positive/reference calibration control.
+sentinel:
+  n: 2
+  params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}
+  # UNIT: percent-of-control (normalized readout scale, mcl `_NORMALIZED_METRIC_RANGE`
+  # (0,200)), NOT raw a.u. With the controls trio declared (below) the readout is
+  # percent-of-control normalized before QC, so this positive reference reads ~100%.
+  expected_band: [95.0, 105.0]
+
+# ---- assay controls (bio ruling ①; DomainConfig.controls / ControlSpec). Declaring
+# this trio ACTIVATES the percent-of-control readout normalization (adapters/wet/
+# bio_readout.py) mcl inserts between the wet reader and QC: every well is re-expressed
+# as a percent of the positive reference above the no-template background, QC'd against
+# the (0, 200) percent range. All three ride catalogue-preset lineage roots.
+#   * negative -> the WEAKEST-design preset (j23103, ~0.01 relative strength) is the
+#     honest no-template / background proxy (its realised coordinate collapses the
+#     expression Gaussian to the lysate baseline).
+#   * positive -> J23100 (coord 1.0, strong-design reference near the optimum).
+#   * reference -> rides kind=sentinel + params.semantic_role="reference" (mcl marks it).
+controls:
+  - {control_id: neg_no_template, role: negative,
+     params: {construct: j23103, incubation_time: 120.0, temperature: 30.0}}
+  - {control_id: pos_strong_ref, role: positive,
+     params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}}
+  - {control_id: ref_calibration, role: reference,
+     params: {construct: j23100, incubation_time: 120.0, temperature: 30.0}}
+
+metric_range: [0.0, 1.2]   # wet `expression_fluorescence` RAW reader range (a.u.)
+
+# No expos artifact injectors: wet artefacts are injected server-side in the SIMULATED
+# reader; dry observations carry only genuine method error. Intentionally empty.
+simulator: {}
+
+# G5: two rounds must run through cleanly on a small budget.
+budget: {wells_total: 96, rounds_total: 2}
+trust: {suspect_high: 0.6, quarantine_low: 0.3}
+
+# ---- M20 domain-contract v2 (additive-optional). Controlled metric vocabulary:
+# objective.metric + both legs' labels.
+metrics: [expression_fluorescence, expression_proxy]
+metric_units:
+  expression_fluorescence: arbitrary_unit
+  expression_proxy: dimensionless
+
+# ---- seed claims (M20 seed-claim neutralization; DomainConfig.seed_claims /
+# SeedClaimSpec). Declaring this block makes the run's seed claim ledger AND its posed
+# hypotheses THIS biological family instead of the built-in polar fallback. Transcribed
+# VERBATIM from the provider's `seed_claims()` (`_SEED_CLAIMS` in
+# expos/adapters/providers/generative_construct.py): the b_strongdesign family (the
+# seeded prior the generative proposer's designs are screened against).
+seed_claims:
+  - {claim_id: b_strongdesign_expresses_higher, status: supported, direction: higher,
+     statement: "strong-design constructs give a higher plate-reader fluorescence"}
+  - {claim_id: b_weakdesign_expresses_higher, status: rejected, direction: lower,
+     statement: "weak-design constructs give a higher plate-reader fluorescence"}
+
+# Dispatch kind: dual-leg, driven by `--loop mcl` (build_adapter never called for the
+# dry leg -- the out-of-band guard, same class as cell_free_expression_screen).
+execution_kind: dry_compute
+
+observables:
+  - name: wet_expression
+    metric: expression_fluorescence
+    description: >-
+      Wet plate-reader reporter fluorescence (a.u.); hidden truth is a unimodal Gaussian
+      in the realised normalized construct design coordinate (SIMULATED reader only).
+      Percent-of-control normalization is applied in the READOUT layer against the
+      negative/positive controls BEFORE ingest/certification.
+  - name: dry_expression_proxy
+    metric: expression_proxy
+    description: >-
+      Dry sequence-feature proxy (dimensionless [0,1]), synthesised from GC/CAI/RBS/
+      folding; a deliberately biased proxy used for Dry->Wet promotion, not the
+      objective. It is BLIND to promoter functional strength -- the honest gap the M25
+      generative "dry ranking overturned by wet" discriminator rides on.
+
+# Acceptance-face debt ledger. expression_high + expression_flipped are LANDED (real
+# discriminative K-D face tests in the M24 domain suite, shared TruthSurface); `flat` is
+# the shared cross-domain null face (landed). LEGAL acceptance_faces.status enum is
+# landed | declared (NOT `staged`); all three below are landed.
+acceptance_faces:
+  - {face_name: expression_high, truth_profile: expression_high, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_expression_high_face_positive_sign_and_only_mu_differs"}
+  - {face_name: expression_flipped, truth_profile: expression_flipped, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_expression_flipped_face_flips_sign_only_mu_differs"}
+  - {face_name: flat, truth_profile: flat, status: landed,
+     test_anchor: "tests/test_m24_bio_domain.py::test_flat_null_face_and_chemistry_anchors_unchanged"}

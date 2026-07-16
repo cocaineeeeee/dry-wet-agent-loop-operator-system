@@ -368,3 +368,155 @@ def test_backend_rejects_uncapable_opcode_loudly(tmp_path):
     res = ex.execute_unit(units[0])
     assert res.final_state is ActionState.ABORTED
     assert "no backend" in res.detail
+
+
+# =========================================================================================
+# protocol -> ExperimentObject compiler + MEASURE -> expression_fluorescence binding (v0.1)
+#
+# The seam B asked for: compile a typed cell-free protocol into a kernel ExperimentObject
+# (candidates / controls / layout / objective observable) so mcl can orchestrate it as one
+# round, and bind the COMMITTED ReadPlate/MEASURE read-back to the `expression_fluorescence`
+# observable. Reuses the M23 transaction/backend machinery above; adds NO new physics.
+# HONESTY: protocol-to-simulated-physical; commit gate real, readings faked; real hw pending.
+# =========================================================================================
+
+from protocols.experiment import (  # noqa: E402
+    EXPRESSION_FLUORESCENCE,
+    bind_measurements,
+    classify_wells,
+    compile_experiment,
+    run_protocol_round,
+)
+from expos.kernel.objects import (  # noqa: E402
+    Candidate,
+    Control,
+    ExperimentObject,
+    ObservationObject,
+    TrustLevel,
+)
+
+
+def test_compile_experiment_shape_and_observable():
+    """A cell-free protocol compiles to a valid ExperimentObject: reaction wells -> candidates,
+    the no-template well -> a negative control, plate positions -> layout, objective observable
+    -> expression_fluorescence."""
+    proto = cell_free_expression_protocol()
+    exp = compile_experiment(proto, round_id=3)
+    assert isinstance(exp, ExperimentObject)
+    assert exp.round_id == 3
+    assert exp.domain == "cell_free_expression_screen"
+    # objective observable binding
+    assert exp.objective.metric == EXPRESSION_FLUORESCENCE
+    assert exp.objective.direction == "maximize"
+    # reaction wells B2/B3/B4 -> candidates; control well B5 -> negative control
+    assert [c.params["well"] for c in exp.candidates] == ["B2", "B3", "B4"]
+    assert all(isinstance(c, Candidate) for c in exp.candidates)
+    assert len(exp.controls) == 1
+    assert isinstance(exp.controls[0], Control)
+    assert exp.controls[0].kind == "negative"
+    assert exp.controls[0].params["well"] == "B5"
+    # layout covers every observed well, cand/control ids consistent (kernel exactly-one rule)
+    assert exp.layout is not None
+    assert {w.well_id for w in exp.layout.wells} == {"B2", "B3", "B4", "B5"}
+    cand_ids = {c.cand_id for c in exp.candidates}
+    for w in exp.layout.wells:
+        if w.cand_id is not None:
+            assert w.cand_id in cand_ids
+        else:
+            assert w.control_id == exp.controls[0].control_id
+
+
+def test_compile_stamps_protocol_fingerprint_and_is_deterministic():
+    """The lowered device-IR fingerprint is stamped into provenance (a lowering change flips
+    run identity); the same protocol compiles to the same fingerprint."""
+    a = compile_experiment(cell_free_expression_protocol())
+    b = compile_experiment(cell_free_expression_protocol())
+    assert a.provenance.protocol_fingerprint == b.provenance.protocol_fingerprint
+    assert len(a.provenance.protocol_fingerprint) == 64
+    assert a.provenance.generator == "protocols.experiment.compile_experiment"
+    # a changed volume (different lowering) flips the stamped fingerprint
+    c = compile_experiment(cell_free_expression_protocol(dna_ul=5.0))
+    assert c.provenance.protocol_fingerprint != a.provenance.protocol_fingerprint
+
+
+def test_classify_wells_infers_controls_and_respects_override():
+    proto = cell_free_expression_protocol()
+    reaction, controls = classify_wells(proto)
+    assert reaction == ("B2", "B3", "B4")
+    assert controls == ("B5",)
+    # an explicit override wins over inference
+    reaction2, controls2 = classify_wells(proto, control_wells={"B2"})
+    assert controls2 == ("B2",)
+    assert set(reaction2) == {"B3", "B4", "B5"}
+
+
+def test_well_designs_bind_onto_candidates():
+    """B's mcl can bind a richer per-well design point (e.g. a construct id) onto candidates
+    without the compiler inventing a design."""
+    proto = cell_free_expression_protocol()
+    exp = compile_experiment(proto, well_designs={"B2": {"construct": "j23100", "coord": 1.0}})
+    b2 = next(c for c in exp.candidates if c.params["well"] == "B2")
+    assert b2.params["construct"] == "j23100"
+    assert b2.params["coord"] == 1.0
+
+
+def test_measure_binding_yields_fluorescence_observations(tmp_path):
+    """DoD #5 (M29 side): a COMMITTED ReadPlate/MEASURE read-back binds to one
+    expression_fluorescence observation per candidate/control well."""
+    rr = run_protocol_round(str(tmp_path))
+    assert rr.run_log.all_committed
+    obs = rr.observations
+    # one observation per observed well (3 candidates + 1 control)
+    assert len(obs) == 4
+    assert all(isinstance(o, ObservationObject) for o in obs)
+    assert all(o.result.metric == EXPRESSION_FLUORESCENCE for o in obs)
+    assert all(o.result.value is not None and o.result.value >= 0.0 for o in obs)
+    assert all(o.result.unit == "arbitrary_unit" for o in obs)
+    # each observation is bound to the right subject (exactly one of cand/control per well)
+    wells = {o.layout_meta.well_id for o in obs}
+    assert wells == {"B2", "B3", "B4", "B5"}
+    control_obs = [o for o in obs if o.is_control]
+    assert len(control_obs) == 1 and control_obs[0].layout_meta.well_id == "B5"
+    assert control_obs[0].control_id == rr.experiment.controls[0].control_id
+    # exp_id / round_id thread through to the observation
+    assert all(o.exp_id == rr.experiment.exp_id for o in obs)
+
+
+def test_measure_binding_is_commit_gated_no_commit_no_observation(tmp_path):
+    """The trust boundary: an UNCOMMITTED MEASURE yields NO observation. Inject an UNOBSERVED
+    (timeout) sensed read-back on the MEASURE unit so it stays PENDING -> zero observations,
+    proving COMMITTED is the observation-eligibility gate (not blind sequence)."""
+    proto = cell_free_expression_protocol("cfe")
+    exp = compile_experiment(proto)
+    units = group_units(lower(proto))
+    measure_unit = next(u for u in units if u.unit_id.endswith("u013"))  # the ReadPlate unit
+    assert measure_unit.kind == "measure"
+
+    lh, pr = FakeLiquidHandler(), FakePlateReader()
+    pr.inject(measure_unit.unit_id, Fault(SensedOutcome.UNOBSERVED))
+    ex = ProtocolExecutor(str(tmp_path), [lh, pr], protocol_id="cfe",
+                          reservoirs={"reservoir_lysate": 1000.0, "reservoir_dna": 1000.0,
+                                      "reservoir_buffer": 1000.0})
+    log = ex.run(units)
+    measure_res = next(u for u in log.units if u.kind == "measure")
+    assert measure_res.final_state is ActionState.PENDING and not measure_res.committed
+    # commit gate: an uncommitted read produces no trusted-eligible observation.
+    assert bind_measurements(exp, proto, log, pr) == []
+
+
+def test_observations_are_pending_never_self_certified(tmp_path):
+    """Honest trust boundary: the compiler/binding NEVER self-certifies trust; observations
+    are emitted PENDING for the kernel QC / claim lifecycle to adjudicate (B's seam #3)."""
+    rr = run_protocol_round(str(tmp_path))
+    assert rr.observations
+    assert all(o.trust is TrustLevel.PENDING for o in rr.observations)
+    assert all(o.qc is None and o.routing is None for o in rr.observations)
+
+
+def test_round_result_carries_honest_fingerprint(tmp_path):
+    """The whole-round result exposes the device-IR fingerprint that the compiled experiment's
+    provenance was stamped with (one consistent identity across compile + execute)."""
+    rr = run_protocol_round(str(tmp_path))
+    assert len(rr.ir_fingerprint) == 64
+    assert rr.experiment.provenance.protocol_fingerprint == rr.ir_fingerprint
+    assert rr.experiment.execution_req.params["ir_fingerprint"] == rr.ir_fingerprint

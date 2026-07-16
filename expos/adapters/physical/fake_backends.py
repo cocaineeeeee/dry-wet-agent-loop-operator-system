@@ -157,6 +157,21 @@ class FakePlateReader(_FakeBackend):
         frac = int(h[:8], 16) / 0xFFFFFFFF
         return round(float(len(wells)) + frac, 6)
 
+    def read_well(self, op: DeviceOp, well: str) -> float:
+        """A deterministic synthetic PER-WELL reading for one well of a MEASURE op.
+
+        Used by the ``protocol -> ExperimentObject`` observation binding
+        (:func:`protocols.experiment.bind_measurements`) to yield ONE reading per
+        candidate/control well on the reporter channel, so a committed ReadPlate becomes a
+        per-well ``expression_fluorescence`` observation (rather than one aggregate float).
+
+        Deterministic ``sha256(channel|well)`` -> a stable pseudo-fluorescence in ``[0, 1)``
+        a.u. SIMULATION only -- NOT a real optical measurement, NOT a truth channel; the
+        physics is faked (BIOLOGY_PROGRAM_2026 §5)."""
+        channel = str(op.params.get("channel", ""))
+        h = hashlib.sha256(f"{channel}|{well}".encode()).hexdigest()
+        return round(int(h[:8], 16) / 0xFFFFFFFF, 6)
+
 
 def pick_backend(backends: list[_FakeBackend], opcode: Opcode) -> _FakeBackend | None:
     """The first backend advertising ``opcode`` (capability routing)."""

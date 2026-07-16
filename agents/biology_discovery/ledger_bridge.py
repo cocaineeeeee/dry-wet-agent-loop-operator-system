@@ -103,13 +103,20 @@ def build_delta(
     ledger: Ledger,
     *,
     run_fingerprint: str = "m28-domain-local",
+    consumed_knowledge_fingerprint: str | None = None,
 ) -> ClaimDelta:
     """Turn ONE (hypothesis, trusted-or-not evidence observation) into a proposed
     :class:`ClaimDelta` with full provenance. This is a *proposal* — it mutates nothing;
     only ``certify_round`` → ``apply_claim_deltas`` can land it, subject to the kernel gate.
 
     Verdict + strength band are computed by the same deterministic rules the registered
-    decision_fn recomputes, so the event stream is self-verifying (K4)."""
+    decision_fn recomputes, so the event stream is self-verifying (K4).
+
+    ``consumed_knowledge_fingerprint`` — the K4 knowledge fingerprint this adjudication is
+    computed AGAINST. Defaults to the domain-local ``knowledge_fingerprint(ledger)`` (the
+    self-contained run). The mcl integration seam (``DiscoveryCertification``) passes the
+    run's REAL compiled-knowledge fingerprint here so the provenance chain closes against
+    B's ledger, never the domain-local projection (bio_seams/M28.md seam #6)."""
     band_name = evidence_strength_band(
         trusted=observation.trusted,
         abs_z=abs(observation.z),
@@ -158,7 +165,11 @@ def build_delta(
                     content_fingerprint=observation.content_fingerprint(),
                 ),
             ),
-            consumed_knowledge_fingerprint=knowledge_fingerprint(ledger),
+            consumed_knowledge_fingerprint=(
+                consumed_knowledge_fingerprint
+                if consumed_knowledge_fingerprint is not None
+                else knowledge_fingerprint(ledger)
+            ),
         ),
         activity=ProvenanceActivity(
             decision_fn_id=M28_DECISION_FN_ID,
@@ -183,17 +194,49 @@ def build_delta(
     )
 
 
+def build_round_deltas(
+    ledger: Ledger,
+    items: list[tuple[Hypothesis, EvidenceObservation]],
+    *,
+    run_fingerprint: str = "m28-domain-local",
+    consumed_knowledge_fingerprint: str | None = None,
+) -> list[ClaimDelta]:
+    """Build (but DO NOT land) the ClaimDeltas for a round's (hypothesis, evidence) pairs.
+
+    This is the PURE verdict→ClaimDelta half of the bridge — no ledger mutation. It is the
+    exact seam the mcl ``CertificationPolicy.decide`` contract wants (``decide`` returns
+    deltas; ``mcl._certify_round`` owns the ``apply_claim_deltas`` call). ``DiscoveryCert-
+    ification`` calls this from its ``decide``; ``certify_round`` calls it then lands them
+    for the domain-local runnable."""
+    return [
+        build_delta(
+            h,
+            o,
+            ledger,
+            run_fingerprint=run_fingerprint,
+            consumed_knowledge_fingerprint=consumed_knowledge_fingerprint,
+        )
+        for h, o in items
+    ]
+
+
 def certify_round(
     ledger: Ledger,
     items: list[tuple[Hypothesis, EvidenceObservation]],
     *,
     run_fingerprint: str = "m28-domain-local",
+    consumed_knowledge_fingerprint: str | None = None,
 ) -> tuple[Ledger, list, list[ClaimDelta]]:
     """Build deltas for a round's (hypothesis, evidence) pairs and land them through the
     kernel gate. Returns ``(new_ledger, apply_report_outcomes, deltas)``.
 
     The ONLY ledger mutation in all of M28 happens on the ``apply_claim_deltas`` line
     below. Everything else in this package is proposal/evidence."""
-    deltas = [build_delta(h, o, ledger, run_fingerprint=run_fingerprint) for h, o in items]
+    deltas = build_round_deltas(
+        ledger,
+        items,
+        run_fingerprint=run_fingerprint,
+        consumed_knowledge_fingerprint=consumed_knowledge_fingerprint,
+    )
     new_ledger, report = apply_claim_deltas(ledger, deltas)
     return new_ledger, list(report.outcomes), deltas

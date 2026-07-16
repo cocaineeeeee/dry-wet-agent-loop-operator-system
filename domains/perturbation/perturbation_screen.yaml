@@ -94,9 +94,9 @@ observables:
 # Acceptance faces: a positive perturbation-effect face + its flipped mirror + the shared
 # cross-domain `flat` null. STAGED (test anchors are the domain-local v0.1 suite).
 acceptance_faces:
-  - {face_name: perturbation_effect_high, truth_profile: perturbation_effect_high, status: staged,
+  - {face_name: perturbation_effect_high, truth_profile: perturbation_effect_high, status: declared,
      test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}
-  - {face_name: perturbation_effect_flipped, truth_profile: perturbation_effect_flipped, status: staged,
+  - {face_name: perturbation_effect_flipped, truth_profile: perturbation_effect_flipped, status: declared,
      test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}
-  - {face_name: flat, truth_profile: flat, status: staged,
+  - {face_name: flat, truth_profile: flat, status: declared,
      test_anchor: "tests/test_m27_perturbation_v01.py::test_provider_birth_time_governance"}

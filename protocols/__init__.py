@@ -25,9 +25,21 @@ from protocols.constraints import (
     Violation,
     check_protocol,
 )
+from protocols.experiment import (
+    EXPRESSION_FLUORESCENCE,
+    RoundResult,
+    bind_measurements,
+    classify_wells,
+    compile_experiment,
+    default_objective,
+    run_protocol_round,
+)
 
 __all__ = [
     "Protocol", "ProtocolStep", "Transfer", "Mix", "Incubate", "ReadPlate",
     "cell_free_expression_protocol",
     "ConstraintError", "ConstraintReport", "Violation", "check_protocol",
+    # protocol -> ExperimentObject compiler + MEASURE -> fluorescence binding (M29 v0.1)
+    "EXPRESSION_FLUORESCENCE", "RoundResult", "bind_measurements", "classify_wells",
+    "compile_experiment", "default_objective", "run_protocol_round",
 ]
