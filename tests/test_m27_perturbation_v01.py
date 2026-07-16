@@ -523,3 +523,330 @@ def test_dry_leg_never_certifies_a_claim():
         for nc in result.negative_claims:
             assert nc["status"] == "rejected"
             assert nc["kind"] == "baseline_gate_negative"
+
+
+# ================================================================= M27 mcl seam (B 160 §3)
+#
+# The two A-side items B's second batch is blocked on:
+#   (1) the NEUTRAL round-batch hook the batch_compete dry leg is driven from, with the
+#       replay data access SEALED inside the provider (mcl must never touch biology data);
+#   (2) the domain-side CertificationPolicy that lands the baseline-gate's negative claims
+#       in the real ledger through the EXISTING _certify_round (zero mcl change).
+
+import ast
+import inspect
+from pathlib import Path
+
+from expos.kernel.claims import (
+    DECISION_FN_REGISTRY,
+    ClaimDecisionStatus,
+    ClaimRecord,
+    EvidenceStrength,
+    Ledger,
+    ProvenanceActivity,
+    ProvenanceSnapshot,
+    ProvenanceUsage,
+    apply_claim_deltas,
+)
+from expos.planner.certification import CertificationError, NullCertification
+
+from domains.perturbation.gate_certification import (
+    M27_CRITERION_VERSION,
+    M27_DECISION_FN_ID,
+    M27_DECISION_FN_VERSION,
+    PerturbationGateCertification,
+    ProposerSelector,
+    gate_claim_id,
+)
+
+_KFP = "sha256:00knowledge00"
+
+
+def _policy(regime="informative", **kw):
+    return PerturbationGateCertification(
+        PerturbationScreenProvider(replay_regime=regime), **kw
+    )
+
+
+# ---- (1) the neutral round-batch hook -------------------------------------------------
+
+
+def test_round_batches_hook_is_neutral_and_carries_reference_deltas():
+    """The hook B drives batch_compete from: `provider.round_batches(round_id)` ->
+    (train_batch, held_batch) with the REFERENCE DELTAS on the held batch. The signature is
+    neutral (a round id + an optional seed -- no domain object crosses it), so mcl calls it
+    exactly as it calls M25's propose_candidates."""
+    prov = PerturbationScreenProvider()
+    params = inspect.signature(prov.round_batches).parameters
+    assert list(params) == ["round_id", "seed"]
+    assert all(p.default is not inspect.Parameter.empty for p in params.values())
+
+    train, held = prov.round_batches(0)
+    assert held.deltas is not None and held.deltas.shape[0] == len(held.pert_ids)
+    assert train.deltas is not None and len(train.pert_ids) > 0
+    assert held.ood_mask is not None and held.ood_mask.any()
+    # the pair drives the UNCHANGED dry leg straight off the hook's return
+    result = CellStatePerturbationAdapter().compete_round(train, held, round_index=0)
+    assert {v.backend for v in result.verdicts} == {
+        "knn_response", "pathway_informed", "ensemble"
+    }
+
+
+def test_round_batches_is_deterministic_train_grows_and_held_is_invariant():
+    """Pure + deterministic in (round_id, seed) -- gate K5, so a resumed round rebuilds the
+    same split bitwise. The held-out split is round-INVARIANT (cross-round scores stay
+    comparable, no round leaks a held row into training) and the train set GROWS."""
+    prov = PerturbationScreenProvider()
+    (t0, h0), (t0b, h0b) = prov.round_batches(0), prov.round_batches(0)
+    assert t0.pert_ids == t0b.pert_ids and h0.pert_ids == h0b.pert_ids
+    assert np.array_equal(h0.deltas, h0b.deltas)
+
+    t1, h1 = prov.round_batches(1)
+    t2, _ = prov.round_batches(2)
+    assert h1.pert_ids == h0.pert_ids  # held-out is round-invariant
+    assert set(t0.pert_ids) < set(t1.pert_ids) <= set(t2.pert_ids)  # train grows
+    assert not (set(t2.pert_ids) & set(h0.pert_ids))  # never leaks the held split
+    # OOD is ALWAYS held out and NEVER trains (the abstention face's honesty premise).
+    assert not any(p.startswith("OOD_") for p in t2.pert_ids)
+    assert any(p.startswith("OOD_") for p in h0.pert_ids)
+
+
+def test_round_batch_data_access_is_sealed_inside_the_provider():
+    """B's constraint (red_to_blue/160 §3.2): mcl must not reach into datasets/replay/* --
+    that would put biology in the domain-NEUTRAL core (EXP014 red, charter §4). The hook is
+    the seal: the replay import lives inside the provider, and the neutral core imports
+    neither the dataset package nor the domain package.
+
+    Asserted on the IMPORT GRAPH (ast), not on the file's text: mentioning either path in a
+    comment/docstring -- e.g. to explain why mcl does NOT touch it -- is fine and must not
+    trip this."""
+    mcl = Path(__file__).resolve().parents[1] / "expos" / "mcl.py"
+    imported: set[str] = set()
+    for node in ast.walk(ast.parse(mcl.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            imported.update(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            imported.add(node.module)
+    roots = {m.partition(".")[0] for m in imported}
+    assert "datasets" not in roots  # the replay data package
+    assert "domains" not in roots  # every Team domain package (biology lives there)
+    # ...while the provider (the domain layer, where biology is allowed to live) owns it.
+    assert "make_replay_dataset" in inspect.getsource(
+        PerturbationScreenProvider._replay_dataset
+    )
+
+
+def test_round_batches_source_is_retrospective_and_never_a_wet_observation():
+    """Charter §4 iron rule at the one hook that touches data: what round_batches yields is
+    benchmark/calibration material, never this run's wet observation."""
+    prov = PerturbationScreenProvider()
+    provenance = prov.round_batches_provenance()
+    assert provenance["is_wet_observation"] is False
+    assert provenance["validation_level"] == "retrospective"
+    assert provenance["role"] == "benchmark_calibration"
+    assert provenance["scope"]  # a negative result is only meaningful inside its scope
+
+
+def test_round_batches_fingerprint_flips_with_the_replay_source():
+    """SEAM 4: the batch-source token B folds into config_fingerprint (the M25
+    operator_fingerprint precedent) -- a regime/scope change flips run identity instead of
+    silently re-scoring the gate on different data."""
+    a = PerturbationScreenProvider().round_batches_fingerprint()
+    b = PerturbationScreenProvider(replay_regime="scrambled").round_batches_fingerprint()
+    c = PerturbationScreenProvider(holdout_frac=0.4).round_batches_fingerprint()
+    assert a.startswith("batches:sha256:")
+    assert a != b and a != c
+    assert PerturbationScreenProvider().round_batches_fingerprint() == a  # stable
+
+
+# ---- (2) the domain-side CertificationPolicy ------------------------------------------
+
+
+def test_gate_certification_conforms_to_the_certification_policy_protocol():
+    """It is a drop-in seventh element: same decide() signature as NullCertification, so
+    B injects it with ZERO edits to mcl / planner / kernel."""
+    ours = inspect.signature(PerturbationGateCertification.decide)
+    theirs = inspect.signature(NullCertification.decide)
+    assert list(ours.parameters) == list(theirs.parameters)
+    assert PerturbationGateCertification.name != NullCertification.name
+    # the decision fn is registered in the SHARED registry the kernel gate checks
+    reg = DECISION_FN_REGISTRY[M27_DECISION_FN_ID]
+    assert reg.version == M27_DECISION_FN_VERSION
+
+
+def test_gate_certification_lands_negative_claims_through_the_kernel_gate():
+    """THE M27 ask: the baseline-gate's negative claims (a complex backend that did not
+    clear the gate) land in the REAL ledger as first-class REJECTED knowledge, via the
+    existing decide -> apply_claim_deltas path. The admitted proposer's mirror lands
+    SUPPORTED, so the gate is proven discriminative on the ledger itself."""
+    policy = _policy("informative")
+    deltas, state = policy.decide([], Ledger(), None, 0, _KFP)
+    ledger, report = apply_claim_deltas(Ledger(), deltas)  # the kernel gate is the mutator
+    status = {c.claim_id: c.status for c in ledger.claims}
+
+    assert status[gate_claim_id("knn_response")] is ClaimDecisionStatus.SUPPORTED
+    for loser in ("pathway_informed", "ensemble"):
+        assert status[gate_claim_id(loser)] is ClaimDecisionStatus.REJECTED
+    assert all(o.deny_reason is None for o in report.outcomes)  # governance-legal deltas
+    assert state is None  # stateless criterion: correlated re-scores never accumulate
+
+    # every landed head is honestly scoped + labelled non-wet
+    for rec in ledger.claims:
+        assert "is_wet_observation=False" in rec.statement
+        assert "scope:" in rec.statement
+    # provenance closes the K4 chain against the run's REAL knowledge fingerprint
+    assert all(
+        d.provenance.usage.consumed_knowledge_fingerprint == _KFP for d in deltas
+    )
+    # the evidence entity is unmistakably the retrospective evaluation, not a wet obs
+    obs = deltas[0].provenance.usage.observations[0]
+    assert obs.obs_id.startswith("m27-retrospective-eval:r0:")
+
+
+def test_gate_verdict_replays_from_the_event_stream():
+    """K4: a third party recomputes the verdict from the emitted snapshot alone, through the
+    registry-resolved fn -- the online status and the replayed status are one function."""
+    deltas, _ = _policy("informative").decide([], Ledger(), None, 0, _KFP)
+    fn = DECISION_FN_REGISTRY[M27_DECISION_FN_ID].fn
+    for delta in deltas:
+        stat = delta.provenance.statistic.model_dump(mode="json")
+        replayed = fn(
+            statistic=stat,
+            power={"trusted": True, "n_eval": stat["per_group"][0]["n"]},
+            criterion_version=M27_CRITERION_VERSION,
+        )
+        assert replayed is delta.status
+        # the frozen criterion rides with the verdict (pinned for replay)
+        assert stat["decision_thresholds"]["min_improvement"] == 0.05
+        assert stat["decision_thresholds"]["baseline"] in ("mean_baseline", "linear_response")
+
+
+def test_indecisive_gate_evidence_is_insufficient_and_mutates_nothing():
+    """K3: on the scrambled regime nothing decisively beats (or loses to) the baseline, so
+    the honest verdict is INSUFFICIENT -- band `none`, no head mutated -- yet the deltas are
+    still emitted, so `not enough evidence` is recorded rather than silently dropped."""
+    deltas, _ = _policy("scrambled").decide([], Ledger(), None, 0, _KFP)
+    assert deltas
+    assert all(d.status is ClaimDecisionStatus.INSUFFICIENT for d in deltas)
+    assert all(d.evidence_strength is EvidenceStrength.NONE for d in deltas)
+    assert all(d.new_content is None for d in deltas)  # insufficient proposes no head
+    ledger, report = apply_claim_deltas(Ledger(), deltas)
+    assert not any(o.mutated_effective_status for o in report.outcomes)
+
+
+def test_gate_certification_is_a_proposer_never_a_mutator():
+    """THE MOAT. decide() proposes; the kernel gate inside mcl._certify_round is the sole
+    mutator. And a gate claim can never touch BIOLOGY: the policy only ever targets its own
+    m27_gate_* model claims -- the provider's biological seed claims are untouchable from
+    the dry side (only a trusted observation certifies those, charter §4)."""
+    seed_ids = [c.claim_id for c in PerturbationScreenProvider().seed_claims()]
+    ledger = Ledger(
+        claims=tuple(
+            ClaimRecord(
+                claim_id=cid,
+                version=1,
+                status=ClaimDecisionStatus.INSUFFICIENT,
+                statement="seed",
+                provenance=ProvenanceSnapshot(
+                    usage=ProvenanceUsage(consumed_knowledge_fingerprint=_KFP),
+                    activity=ProvenanceActivity(
+                        decision_fn_id=M27_DECISION_FN_ID,
+                        decision_fn_version=M27_DECISION_FN_VERSION,
+                        criterion_version=M27_CRITERION_VERSION,
+                    ),
+                ),
+            )
+            for cid in seed_ids
+        )
+    )
+    before = ledger.canonical_json()
+    deltas, _ = _policy("informative").decide([], ledger, None, 0, _KFP)
+
+    assert ledger.canonical_json() == before  # decide mutated nothing
+    assert deltas and not ({d.target_claim_id for d in deltas} & set(seed_ids))
+    # ... and the backends themselves hold no ledger handle at all.
+    assert not hasattr(MeanBaselineBackend(), "ledger")
+    assert "ledger" not in inspect.getsource(CellStatePerturbationAdapter)
+
+
+def test_gate_certification_ignores_this_runs_wet_observations():
+    """No laundering in either direction (charter §4): a benchmark-split claim about a MODEL
+    is neither supported nor refuted by a wet reading of this run, so the wet stream cannot
+    move it -- the deltas are identical with or without adjudicated observations."""
+    policy = _policy("informative")
+    bare, _ = policy.decide([], Ledger(), None, 0, _KFP)
+    with_obs, _ = policy.decide(
+        [object(), object()], Ledger(), None, 0, _KFP  # a stream it must not read
+    )
+    assert [d.provenance.fingerprint() for d in bare] == [
+        d.provenance.fingerprint() for d in with_obs
+    ]
+
+
+def test_gate_claims_bind_late_to_the_round_never_to_prebuilt_ids():
+    """B's 158 general rule: a binding may only happen once the thing it binds to exists.
+    Nothing is bound at construction -- the policy takes no claim id and no roster. The
+    round's REAL competitors (which the roster + the data decide) mint the claim ids inside
+    decide(): swap the roster and the SAME policy object certifies whatever actually ran."""
+    assert "claim_id" not in inspect.signature(PerturbationGateCertification.__init__).parameters
+
+    duo = CellStatePerturbationAdapter(
+        backend_factory=lambda: [MeanBaselineBackend(), KNNResponseBackend()]
+    )
+    policy = PerturbationGateCertification(PerturbationScreenProvider(), duo)
+    deltas, _ = policy.decide([], Ledger(), None, 0, _KFP)
+    assert [d.target_claim_id for d in deltas] == [gate_claim_id("knn_response")]
+
+    # a different roster -> different real competitors -> different claim ids, same policy
+    # SHAPE (id-free construction), nothing prebuilt.
+    full = PerturbationGateCertification(PerturbationScreenProvider())
+    ids = {d.target_claim_id for d in full.decide([], Ledger(), None, 0, _KFP)[0]}
+    assert ids == {
+        gate_claim_id(b) for b in ("knn_response", "pathway_informed", "ensemble")
+    }
+
+
+def test_selector_names_proposers_by_semantics_not_by_id():
+    """The M28 ArmSelector twin: which competitors get certified is named by SEMANTICS
+    (backend name / the gate's own admission role), resolved against THIS round's real
+    verdicts -- never by a claim id."""
+    negatives_only = _policy("informative", selector=ProposerSelector(admission="not_admitted"))
+    deltas, _ = negatives_only.decide([], Ledger(), None, 0, _KFP)
+    assert {d.target_claim_id for d in deltas} == {
+        gate_claim_id("pathway_informed"), gate_claim_id("ensemble")
+    }
+    assert all(d.status is ClaimDecisionStatus.REJECTED for d in deltas)
+
+    by_name = _policy("informative", selector=ProposerSelector(names=("knn_response",)))
+    assert [d.target_claim_id for d in by_name.decide([], Ledger(), None, 0, _KFP)[0]] == [
+        gate_claim_id("knn_response")
+    ]
+    with pytest.raises(CertificationError):
+        ProposerSelector(admission="maybe")
+
+
+def test_gate_certification_fails_loud_at_wiring_not_mid_round():
+    """Birth-time governance: a provider without the hook (chemistry / M24-B / M26 / M28)
+    is refused AT CONSTRUCTION with a message naming the hook -- never an AttributeError
+    mid-round, never a silent no-op."""
+    class _NoHookProvider:
+        pass
+
+    with pytest.raises(CertificationError, match="round_batches"):
+        PerturbationGateCertification(_NoHookProvider())
+    with pytest.raises(CertificationError):
+        PerturbationGateCertification()  # no provider and no staged result
+
+
+def test_staged_round_results_avoid_recompeting_the_round():
+    """B's dry leg already holds the round's CompetitionRoundResult; handing it over means
+    the certified verdicts ARE the round's verdicts (one competition, not two)."""
+    prov = PerturbationScreenProvider()
+    train, held = prov.round_batches(3)
+    result = CellStatePerturbationAdapter().compete_round(train, held, round_index=3)
+    staged = PerturbationGateCertification(prov, results_by_round={3: result})
+    assert staged.round_result(3) is result
+    deltas, _ = staged.decide([], Ledger(), None, 3, _KFP)
+    assert {d.target_claim_id for d in deltas} == {
+        gate_claim_id(v.backend) for v in result.verdicts
+    }

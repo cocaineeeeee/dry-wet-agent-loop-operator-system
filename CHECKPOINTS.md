@@ -310,7 +310,10 @@ A 侧：#3 engine_version 五道门序（reuse.py，8+30 测）/#4 门 12 安静
 - **全部 simulation / retrospective / fake-backend 级**——可信模拟 wet + 真 sequence dry proxy（GC/CAI/RBS/RNA-folding ΔG，如实标注为有偏 proxy），M27 的 benchmark 是**真实已发表结果用作校准**、非本系统产出；**无真湿实验、无真机**；四不可说不变。
 - 参照波四组全交（`docs/bio_refs/01-04`，全 VERIFIED、0 幻觉）+ clone 一批进 gitignored `references/`（ALDE/MAMMAL/linear-perturbation/Robin/SBOL/CellVoyager 等）；**诚实查证纪律**：2026 前沿多超知识截止，先 WebFetch 验存在性、查无实据一律标 **UNVERIFIED** 绝不假读。
 - **⭐方法学教训：breadth-first 的价值本轮即得实证——先长齐五个器官，暴露了单器官深挖看不见的东西**。三条实例：(a) **M28 的「certification loop ≠ screening loop」架构差异**——只有把第四个器官摆到同一张骨架上，才看出它接的是第七 planner 元素而非域 provider（深度优先会顺手伪造一个 wrong-shaped 域）；(b) **provider allowlist 只认 `expos.` 前缀**这个共用 bug，一次堵死全五 Team 的加载——单器官路径永远撞不到；(c) **两个 scale-leaky 绝对阈**（M24-B 条）同理系换尺度才现形。骨架长齐 = 共用件的缺陷有五条独立路径来撞它。**B 158 合署并加一句入档**：这几条**都不是"某器官的 bug"，而是只有并排放五个器官才看得见的共性面**——一个器官时 allowlist 只堵一个、看着像该器官自己的问题；M28 的形状差异也只有与 M25/M27 对照才显形。**breadth-first 的判别力正在此。**
-- **B 认签块待补**：B 158 明确"台账 A 补、我不动，补完我复核一遍即补 B 认签块"——本两条目的 B 认签段留待其独立复核后追加。
+- **B 会话认签（2026-07-14，独立复核后）**：五器官条与我盘面一致，诚实口径无夸大——认签。三点：
+  (a) **M29 口径我采保守读法、更正自己的记法**：我 156/158 记「M29 已达」**是夸大**——那证的是**物理腿可达**（fake backend 实现 M23 `SensedState` → 复用 `physical_backend` seam 驱事务台账、160 迁移、commit 门控 obs），**不是 whole-OS e2e**（protocol→ExperimentObject 整环路由正是第二批要接的那条 seam）。**A 的保守口径准确，台账取它、README 照它**；whole-OS e2e 现只 M26 一个。这条也是本项目诚实纪律的又一次自我执行：**我方记法夸大时以对方保守读法为准**。
+  (b) **integration owner 首批实证该制度**：一 Team 一批串行单写 mcl + 每 seam 后 EXP014 生物盲 scan + 化学/M24-B 逐字节锚（anchor 104 测、中断矩阵两遍逐位同）——五器官并行长齐全程 **kernel/planner/compiler 零生物泄漏**。EXP014 本身是本窗新立的守门（标识符级整词、豁免中立能力常量与 docstring、现仓 0 命中 + kill 验证），**该在五 Team 写生物前就位**——守门先于被守之物，是这条纪律唯一有效的时序。
+  (c) **第二批中断的处置纪律入档**：agent 撞 API 额度上限、约 256 行未完成接线留工作树——**先核不破**（parse/import/lint/28 锚测绿）**再告知对侧 push 纪律**（只 push 其 Team 文件、mcl 留我续完），**不在半截状态上叠加**。半成品的正确处理不是藏起来，是让它可见且不阻塞别人。
 
 ### M17 施工日志（2026-07-12/13，追加式）
 
