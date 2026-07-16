@@ -2,7 +2,8 @@
 
 docs/bio_refs/02 §A/§4: M26's novel step vs the scalar-phenotype domains is that the
 observable is a TIME-SERIES, and the phenotype is DERIVED from it -- steady state, response
-amplitude, switching time. This module is the shared derivation used by BOTH legs: the dry
+amplitude, switching time, bistable separation, and (for oscillators) oscillation frequency;
+plus a cross-candidate EC50 for a dose-response curve. This module is the shared derivation used by BOTH legs: the dry
 circuit adapter (over the ODE proxy) and the wet timeseries reader (over the hidden-truth
 trace). Keeping one derivation guarantees dry and wet summarise a trace identically.
 
@@ -47,6 +48,63 @@ def switching_time(t: np.ndarray, y: np.ndarray, frac: float = 0.5) -> float:
     return float(t[-1])
 
 
+def oscillation_frequency(
+    t: np.ndarray,
+    y: np.ndarray,
+    *,
+    tail_frac: float = 0.5,
+    min_rel_amplitude: float = 0.05,
+    min_cycles: int = 2,
+) -> float:
+    """Dominant oscillation frequency (cycles per unit time) of the SETTLED tail, derived by
+    upward mean-crossing counting -- the fourth derived DYNAMIC phase (docs/bio_refs/02 §A:
+    oscillation frequency), the one a monotone-rise / flat trace does NOT have. Robust and
+    library-free (no FFT dependency): de-mean the last ``tail_frac`` of the trace, find upward
+    zero (mean) crossings, take the reciprocal of the mean inter-crossing period.
+
+    Returns ``0.0`` (an honest "no oscillation" sentinel) when the tail excursion is below
+    ``min_rel_amplitude`` of the tail mean (a flat / monotone-settled trace) or fewer than
+    ``min_cycles`` crossings are seen -- so a cassette rise and a flat null both read 0.0."""
+    k = max(4, int(round(len(y) * tail_frac)))
+    tail = np.asarray(y[-k:], dtype=float)
+    ttail = np.asarray(t[-k:], dtype=float)
+    mean = float(np.mean(tail))
+    span = float(np.max(tail) - np.min(tail))
+    ref = max(abs(mean), 1e-9)
+    if span / ref < min_rel_amplitude:
+        return 0.0
+    de = tail - mean
+    crossings = [
+        ttail[i] for i in range(1, len(de)) if de[i - 1] < 0.0 <= de[i]
+    ]
+    if len(crossings) < min_cycles:
+        return 0.0
+    period = float(np.mean(np.diff(crossings)))
+    if period <= 0.0:
+        return 0.0
+    return 1.0 / period
+
+
+def ec50_from_curve(doses: np.ndarray, responses: np.ndarray) -> float:
+    """Estimate the EC50 (half-maximal dose) of a monotone dose-response CURVE by linear
+    interpolation to the half-maximal response -- the derived phase of a ``dose_response``
+    circuit (a phase that lives ACROSS candidates, not within one trace). ``doses`` must be
+    ascending. Returns the smallest dose at which the response first reaches
+    ``min + 0.5*(max-min)``; ``nan`` if the curve is flat (no half-max to cross)."""
+    d = np.asarray(doses, dtype=float)
+    r = np.asarray(responses, dtype=float)
+    lo, hi = float(np.min(r)), float(np.max(r))
+    if hi - lo < 1e-12:
+        return float("nan")
+    half = lo + 0.5 * (hi - lo)
+    for i in range(1, len(r)):
+        if (r[i - 1] < half <= r[i]) or (r[i - 1] >= half > r[i]):
+            # linear interpolation between the bracketing dose points.
+            frac = (half - r[i - 1]) / (r[i] - r[i - 1])
+            return float(d[i - 1] + frac * (d[i] - d[i - 1]))
+    return float(d[int(np.argmin(np.abs(r - half)))])
+
+
 @dataclass(frozen=True)
 class DynamicPhenotype:
     """The derived dynamic phenotype of one time-series (one reporter species).
@@ -59,6 +117,7 @@ class DynamicPhenotype:
     response_amplitude: float
     switching_time: float
     separation: float
+    oscillation_frequency: float
     value: float
 
     def secondary(self) -> dict[str, float]:
@@ -67,6 +126,7 @@ class DynamicPhenotype:
             "response_amplitude": self.response_amplitude,
             "switching_time": self.switching_time,
             "separation": self.separation,
+            "oscillation_frequency": self.oscillation_frequency,
         }
 
 
@@ -80,18 +140,21 @@ def derive_phenotype(
     """Derive the dynamic phenotype from a reporter trajectory. If ``antagonist`` is given
     (the opposing arm of a two-node latch), ``separation`` = reporter_ss - antagonist_ss
     (the bistable depth). ``value_key`` picks which scalar is the load-bearing ``value``
-    ('steady_state' for a cassette dose response, 'separation' for a toggle latch)."""
+    ('steady_state' for a cassette dose response, 'separation' for a toggle latch,
+    'oscillation_frequency' for an oscillator)."""
     ss = steady_state(t, reporter)
     amp = response_amplitude(t, reporter)
     sw = switching_time(t, reporter)
+    freq = oscillation_frequency(t, reporter)
     sep = 0.0
     if antagonist is not None:
         sep = ss - steady_state(t, antagonist)
     scalars = {"steady_state": ss, "response_amplitude": amp,
-               "switching_time": sw, "separation": sep}
+               "switching_time": sw, "separation": sep,
+               "oscillation_frequency": freq}
     if value_key not in scalars:
         raise ValueError(f"unknown value_key {value_key!r}; known: {sorted(scalars)}")
     return DynamicPhenotype(
         steady_state=ss, response_amplitude=amp, switching_time=sw,
-        separation=sep, value=scalars[value_key],
+        separation=sep, oscillation_frequency=freq, value=scalars[value_key],
     )

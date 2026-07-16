@@ -19,10 +19,14 @@ The five levels (low -> high), each a pure deterministic predicate on the typed 
      circuit (something must be observable).
   4. semantics -- ontology annotation: every role maps to a known SO term and every
      interaction kind to a known SBO term (the annotation the reasoning layer would consume).
-  5. function  -- task-specific MOTIF detection for the declared ``behaviour``:
+  5. function  -- task-specific MOTIF detection for the declared ``behaviour`` (grown in the
+     v0.1 deepening pass to the canonical family, docs/bio_refs/02 §1):
        * expression_cassette -> exactly one expression unit, NO regulatory interactions.
+       * dose_response       -> an inducible unit driven by an external input, NO internal
+                                repression feedback (a monotone inducible element).
        * toggle_switch       -> a mutual-repression 2-cycle (A represses B, B represses A).
-       * repressilator       -> an odd repression cycle of length >= 3 (declared, minimal).
+       * feed_forward_loop   -> a three-node A->B, A->C, B->C regulation triangle (FFL).
+       * oscillator / repressilator -> an odd repression cycle of length >= 3.
      A declared behaviour whose motif is absent is REJECTED (the illegal-topology stop).
 
 A lower level failing SHORT-CIRCUITS: higher levels are marked ``not_run`` (matching the
@@ -105,14 +109,16 @@ def _check_execution(g: CircuitGraph) -> LevelResult:
                 return LevelResult("execution", False,
                                    detail=f"unit {u.tu_id} {slot} references missing part {pid!r}")
     tu_ids = {u.tu_id for u in g.units}
-    products = g.products()
+    regulators = g.regulator_species()  # products expressed by units + declared external inputs
     for i in g.interactions:
         if i.target_tu not in tu_ids:
             return LevelResult("execution", False,
                                detail=f"interaction targets missing unit {i.target_tu!r}")
-        if i.regulator not in products:
-            return LevelResult("execution", False,
-                               detail=f"interaction regulator {i.regulator!r} is expressed by no unit")
+        if i.regulator not in regulators:
+            return LevelResult(
+                "execution", False,
+                detail=f"interaction regulator {i.regulator!r} is neither expressed by a unit "
+                       f"nor a declared external input")
     return LevelResult("execution", True, detail="graph constructible, no dangling refs")
 
 
@@ -182,26 +188,74 @@ def _has_repression_cycle(g: CircuitGraph, length: int) -> bool:
     return any(walk(s, s, 0) for s in edges)
 
 
+def _regulation_edges(g: CircuitGraph) -> set[tuple[str, str]]:
+    """Sign-agnostic unit->unit regulation edges (source unit expresses the regulator that
+    targets the destination unit). External-input-driven edges are excluded (no source unit)."""
+    prod_to_unit = {u.product: u.tu_id for u in g.units}
+    return {
+        (prod_to_unit[i.regulator], i.target_tu)
+        for i in g.interactions
+        if i.regulator in prod_to_unit and prod_to_unit[i.regulator] != i.target_tu
+    }
+
+
+def _has_feed_forward_loop(g: CircuitGraph) -> bool:
+    """True iff there exist three distinct units A,B,C with regulation edges A->B, A->C and
+    B->C -- the canonical three-node feed-forward loop (sign-agnostic; coherent/incoherent
+    both counted, as the STRUCTURE is the motif the verify gate checks)."""
+    edges = _regulation_edges(g)
+    succ: dict[str, set[str]] = {}
+    for s, d in edges:
+        succ.setdefault(s, set()).add(d)
+    for a in succ:
+        for b in succ[a]:
+            for c in succ[a]:
+                if c != b and c in succ.get(b, ()):
+                    return True
+    return False
+
+
+def _input_driven_interactions(g: CircuitGraph) -> list:
+    """Interactions whose regulator is a declared external input (an inducer dose knob)."""
+    inputs = set(g.inputs)
+    return [i for i in g.interactions if i.regulator in inputs]
+
+
 def _check_function(g: CircuitGraph) -> LevelResult:
     b = g.behaviour
     if b == "expression_cassette":
         if g.interactions:
             return LevelResult("function", False,
                                detail="expression_cassette must have NO regulatory interactions")
-        n_expr = len([u for u in g.units if u.is_reporter or True])
-        if n_expr < 1:
+        if not g.units:
             return LevelResult("function", False, detail="no expression unit")
         return LevelResult("function", True, detail="single constitutive expression unit (motif ok)")
+    if b == "dose_response":
+        # motif: an inducible unit driven by an external input; no internal repression feedback
+        # (that would make it a toggle/oscillator, not a monotone dose-response element).
+        if not _input_driven_interactions(g):
+            return LevelResult("function", False,
+                               detail="dose_response declared but no external-input-driven interaction")
+        if any(_has_repression_cycle(g, k) for k in (2, 3)):
+            return LevelResult("function", False,
+                               detail="dose_response has an internal repression cycle (not a monotone inducible element)")
+        return LevelResult("function", True,
+                           detail="external-input-driven inducible unit detected (dose_response motif)")
     if b == "toggle_switch":
         if _has_repression_cycle(g, 2):
             return LevelResult("function", True, detail="mutual-repression 2-cycle detected (toggle motif)")
         return LevelResult("function", False,
                            detail="toggle_switch declared but no mutual-repression 2-cycle motif")
-    if b == "repressilator":
+    if b == "feed_forward_loop":
+        if _has_feed_forward_loop(g):
+            return LevelResult("function", True, detail="three-node feed-forward loop detected (FFL motif)")
+        return LevelResult("function", False,
+                           detail="feed_forward_loop declared but no A->B, A->C, B->C triangle")
+    if b in ("oscillator", "repressilator"):
         if any(_has_repression_cycle(g, k) for k in (3, 5, 7)):
             return LevelResult("function", True, detail="odd repression cycle detected (oscillator motif)")
         return LevelResult("function", False,
-                           detail="repressilator declared but no odd repression cycle")
+                           detail=f"{b} declared but no odd (>=3) repression cycle")
     return LevelResult("function", False, detail=f"unknown declared behaviour {b!r}")
 
 

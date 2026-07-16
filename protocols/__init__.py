@@ -14,8 +14,20 @@ from protocols.objects import (
     Protocol,
     ProtocolStep,
     Transfer,
+    Mix,
     Incubate,
     ReadPlate,
+    cell_free_expression_protocol,
+)
+from protocols.constraints import (
+    ConstraintError,
+    ConstraintReport,
+    Violation,
+    check_protocol,
 )
 
-__all__ = ["Protocol", "ProtocolStep", "Transfer", "Incubate", "ReadPlate"]
+__all__ = [
+    "Protocol", "ProtocolStep", "Transfer", "Mix", "Incubate", "ReadPlate",
+    "cell_free_expression_protocol",
+    "ConstraintError", "ConstraintReport", "Violation", "check_protocol",
+]

@@ -7,6 +7,18 @@ Keeping this layer explicit means the protocol never names a device and the back
 never parses protocol intent -- the seam a real multi-instrument deployment needs.
 """
 
-from device_ir.ir import DeviceOp, Opcode, lower
+from device_ir.ir import (
+    DeviceOp,
+    Opcode,
+    Unit,
+    IR_VERSION,
+    DECK_SENTINEL,
+    lower,
+    group_units,
+    ir_fingerprint,
+)
 
-__all__ = ["DeviceOp", "Opcode", "lower"]
+__all__ = [
+    "DeviceOp", "Opcode", "Unit", "IR_VERSION", "DECK_SENTINEL",
+    "lower", "group_units", "ir_fingerprint",
+]

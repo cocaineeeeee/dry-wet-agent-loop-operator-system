@@ -55,6 +55,28 @@ INT_REPRESSES = "represses"
 INT_ACTIVATES = "activates"
 VALID_INTERACTIONS: frozenset[str] = frozenset({INT_REPRESSES, INT_ACTIVATES})
 
+#: Declared design-behaviour classes the function-level verify gate knows a motif for.
+#: (design-intent labels, NOT truth). Grown in this deepening pass from the original two
+#: (expression_cassette / toggle_switch) to the canonical six-ish family (docs/bio_refs/02 §1:
+#: expression cassettes / logic gates / feed-forward loops / toggle switches / oscillators).
+BEHAVIOUR_CASSETTE = "expression_cassette"
+BEHAVIOUR_DOSE_RESPONSE = "dose_response"
+BEHAVIOUR_TOGGLE = "toggle_switch"
+BEHAVIOUR_FEED_FORWARD = "feed_forward_loop"
+BEHAVIOUR_OSCILLATOR = "oscillator"
+#: legacy alias kept so an existing ``behaviour='repressilator'`` graph still verifies.
+BEHAVIOUR_REPRESSILATOR = "repressilator"
+VALID_BEHAVIOURS: frozenset[str] = frozenset(
+    {
+        BEHAVIOUR_CASSETTE,
+        BEHAVIOUR_DOSE_RESPONSE,
+        BEHAVIOUR_TOGGLE,
+        BEHAVIOUR_FEED_FORWARD,
+        BEHAVIOUR_OSCILLATOR,
+        BEHAVIOUR_REPRESSILATOR,
+    }
+)
+
 #: SBO term analogues per interaction kind (the "semantics" verify level checks these).
 SBO_TERMS: Mapping[str, str] = {
     INT_REPRESSES: "SBO:0000169",   # inhibition
@@ -138,6 +160,12 @@ class CircuitGraph:
     units: tuple[TranscriptionUnit, ...]
     interactions: tuple[Interaction, ...] = ()
     behaviour: str = "expression_cassette"
+    #: External INPUT species (small-molecule inducers such as IPTG/aTc) that regulate a
+    #: unit but are NOT expressed by any unit -- the environmental knob a dose_response
+    #: circuit reads. They are legal regulators (execution level allows regulator in
+    #: products | inputs); the actual applied level is a simulation CONDITION (the dose),
+    #: not part of the topology, so it rides in the adapter params, not here.
+    inputs: tuple[str, ...] = ()
 
     # -- lookups -------------------------------------------------------------
     def part(self, part_id: str) -> Part | None:
@@ -148,6 +176,11 @@ class CircuitGraph:
 
     def products(self) -> frozenset[str]:
         return frozenset(u.product for u in self.units)
+
+    def regulator_species(self) -> frozenset[str]:
+        """All species that MAY legally regulate a unit: expressed products + declared
+        external inputs (inducers). Used by the execution-level verify check."""
+        return self.products() | frozenset(self.inputs)
 
     def reporters(self) -> tuple[TranscriptionUnit, ...]:
         return tuple(u for u in self.units if u.is_reporter)
@@ -180,6 +213,7 @@ class CircuitGraph:
                     self.interactions, key=lambda i: (i.regulator, i.target_tu, i.kind)
                 )
             ],
+            "inputs": sorted(self.inputs),
             "behaviour": self.behaviour,
         }
 
@@ -221,6 +255,7 @@ class CircuitGraph:
                 for u in self.units
             ],
             "interactions": [asdict(i) for i in self.interactions],
+            "inputs": list(self.inputs),
             "topology_digest": self.topology_digest(),
             "parameter_digest": self.parameter_digest(),
         }
@@ -276,10 +311,12 @@ def circuit_from_payload(payload: Mapping[str, object]) -> CircuitGraph:
         )
     except (KeyError, TypeError) as exc:
         raise ValueError(f"malformed circuit payload: {exc}") from exc
+    inputs = tuple(str(s) for s in payload.get("inputs", ()))  # type: ignore[union-attr]
     return CircuitGraph(
         circuit_id=str(payload.get("circuit_id", "circuit")),
         parts=parts,
         units=units,
         interactions=interactions,
         behaviour=str(payload.get("behaviour", "expression_cassette")),
+        inputs=inputs,
     )

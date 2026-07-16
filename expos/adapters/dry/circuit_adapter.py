@@ -36,15 +36,28 @@ INPUT_KIND_CIRCUIT_TOPOLOGY = "circuit_topology"
 
 _DEFAULT_METRIC = "dynamic_proxy"
 
-# Simulation defaults per behaviour (deterministic; asymmetric IC breaks toggle symmetry so
-# the latch settles to a definite state and the bistable separation is well-defined).
+# Simulation defaults per behaviour (deterministic; asymmetric IC breaks toggle/oscillator
+# symmetry so the latch settles to a definite state / the ring enters its limit cycle).
 _SIM_DEFAULTS: dict[str, dict[str, Any]] = {
     "expression_cassette": {"t_end": 20.0, "dt": 0.02, "value_key": "steady_state"},
+    "dose_response": {"t_end": 20.0, "dt": 0.02, "value_key": "steady_state"},
     "toggle_switch": {
         "t_end": 40.0, "dt": 0.02, "value_key": "separation",
         "initial": {"TetR": 5.0, "LacI": 0.0},
     },
+    "feed_forward_loop": {"t_end": 30.0, "dt": 0.02, "value_key": "steady_state"},
+    "oscillator": {
+        "t_end": 120.0, "dt": 0.02, "value_key": "oscillation_frequency",
+        "initial": {"LacI": 1.5, "TetR": 0.5, "cI": 0.0},
+    },
+    "repressilator": {
+        "t_end": 120.0, "dt": 0.02, "value_key": "oscillation_frequency",
+        "initial": {"LacI": 1.5, "TetR": 0.5, "cI": 0.0},
+    },
 }
+
+#: dose (design coord in [0,1]) -> external inducer concentration applied in the ODE.
+_INDUCER_MAX_LEVEL = 5.0
 
 
 def circuit_params(
@@ -112,6 +125,10 @@ class CircuitTopologyAdapter:
         sim_kwargs = {
             k: v for k, v in defaults.items() if k in ("t_end", "dt", "initial")
         }
+        # dose-response: the design coord IS the applied inducer dose -> external input level.
+        if graph.inputs:
+            dose = float(params.get("coord", 1.0))
+            sim_kwargs["input_levels"] = {s: dose * _INDUCER_MAX_LEVEL for s in graph.inputs}
         # per-candidate stochastic override (intrinsic-noise proxy; seed for determinism).
         if params.get("stochastic"):
             sim_kwargs["stochastic"] = True

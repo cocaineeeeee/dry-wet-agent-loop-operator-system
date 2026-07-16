@@ -75,11 +75,14 @@ def _hill(kind: str, level: float, K: float, n: float) -> float:
 
 
 def _build_derivative(graph: CircuitGraph) -> tuple[list[str], Callable[[np.ndarray], np.ndarray]]:
-    """Return (species order, f(state)->dstate) built from the graph wiring. Species are
-    the unit products, in unit declaration order."""
-    species = [u.product for u in graph.units]
+    """Return (species order, f(state)->dstate) built from the graph wiring. Species are the
+    unit products (in unit declaration order) FOLLOWED BY the external input species (inducers).
+    Input species have ZERO derivative -- they are held at their applied (dose) level, a
+    simulation CONDITION supplied via ``input_levels``, not produced by the circuit."""
+    species = [u.product for u in graph.units] + list(graph.inputs)
     idx = {s: i for i, s in enumerate(species)}
     units = list(graph.units)
+    input_set = set(graph.inputs)
     # regulators grouped by target unit.
     regs_by_tu: dict[str, list] = {u.tu_id: [] for u in units}
     for i in graph.interactions:
@@ -95,6 +98,8 @@ def _build_derivative(graph: CircuitGraph) -> tuple[list[str], Callable[[np.ndar
                 prod *= _hill(inter.kind, r_level, k.K, k.n)
             production = k.basal + k.beta * prod
             d[idx[u.product]] = production - k.gamma * state[idx[u.product]]
+        # input species: dx/dt = 0 (held at the applied dose); left as zeros.
+        _ = input_set
         return d
 
     return species, f
@@ -106,24 +111,32 @@ def simulate(
     t_end: float = 20.0,
     dt: float = 0.02,
     initial: Mapping[str, float] | None = None,
+    input_levels: Mapping[str, float] | None = None,
     stochastic: bool = False,
     noise_scale: float = 0.05,
     seed: int | None = None,
 ) -> TimeSeries:
     """Integrate the circuit ODE (RK4) from ``initial`` (default: each product at its own
-    basal level) to ``t_end``. If ``stochastic`` add a seeded chemical-Langevin diffusion
-    term (intrinsic noise). Deterministic for a fixed (graph, initial, seed). Species are
-    clamped to >= 0 (a concentration cannot go negative)."""
+    basal level) to ``t_end``. External input species (inducers) are held at their
+    ``input_levels`` value throughout (a dose condition; default 0). If ``stochastic`` add a
+    seeded chemical-Langevin diffusion term (intrinsic noise; inputs are exempt -- a dose has
+    no intrinsic biochemical noise). Deterministic for a fixed (graph, initial, dose, seed).
+    Species are clamped to >= 0 (a concentration cannot go negative)."""
     species, f = _build_derivative(graph)
     idx = {s: i for i, s in enumerate(species)}
+    input_set = set(graph.inputs)
     n_steps = int(round(t_end / dt))
     x = np.zeros(len(species), dtype=float)
     for u in graph.units:
         x[idx[u.product]] = u.kinetics.basal
+    for s in graph.inputs:
+        x[idx[s]] = float((input_levels or {}).get(s, 0.0))
     if initial:
         for s, v in initial.items():
             if s in idx:
                 x[idx[s]] = float(v)
+    # a boolean mask of species whose stochastic diffusion is suppressed (the held inputs).
+    held = np.array([s in input_set for s in species])
 
     rng = np.random.default_rng(seed) if stochastic else None
     traj = np.zeros((n_steps + 1, len(species)), dtype=float)
@@ -137,7 +150,8 @@ def simulate(
         if stochastic and rng is not None:
             # chemical-Langevin diffusion: magnitude ~ sqrt(total flux) per species.
             flux = np.abs(f(x)) + np.abs(x)
-            x = x + noise_scale * np.sqrt(flux) * np.sqrt(dt) * rng.standard_normal(len(species))
+            noise = noise_scale * np.sqrt(flux) * np.sqrt(dt) * rng.standard_normal(len(species))
+            x = x + np.where(held, 0.0, noise)  # inputs held: no intrinsic noise
         x = np.maximum(x, 0.0)
         traj[step + 1] = x
 

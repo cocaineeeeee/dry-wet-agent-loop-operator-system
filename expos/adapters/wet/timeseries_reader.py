@@ -147,3 +147,51 @@ def read_dynamic(
         "seed": seed,
     }
     return pheno, truth_record
+
+
+# --------------------------------------------------------------------------- oscillatory face
+# The oscillation FREQUENCY leg of the wet dynamic reader (docs/bio_refs/02 §A: oscillation
+# frequency is the fourth derived DYNAMIC phase). Where read_dynamic reads a settled level,
+# this reads a sustained oscillation whose TRUE frequency rises linearly with the design
+# coordinate -- so the derived ``oscillation_frequency`` phase carries the design signal, the
+# oscillator analogue of the settled-level dynamic_high face.
+OSC_FREQ_LO = 0.08   # true oscillation frequency at coord=0
+OSC_FREQ_HI = 0.20   # true oscillation frequency at coord=1
+_OSC_MEAN = 5.0
+_OSC_AMPLITUDE = 3.0
+
+
+def oscillation_frequency_true(coord: float) -> float:
+    """The hidden TRUE oscillation frequency for a design coordinate (linear coord->frequency
+    law; monotone increasing). Never leaves the reader process."""
+    return OSC_FREQ_LO + float(coord) * (OSC_FREQ_HI - OSC_FREQ_LO)
+
+
+def read_oscillation(
+    coord: float,
+    *,
+    t_end: float = 200.0,
+    dt: float = 0.2,
+    noise_sd: float = 0.02,
+    seed: int | None = None,
+) -> tuple[DynamicPhenotype, dict]:
+    """Take ONE wet OSCILLATORY reading: synthesise a sustained sinusoidal reporter trace whose
+    true frequency is ``oscillation_frequency_true(coord)``, derive its dynamic phenotype (the
+    OS-visible observation, whose ``oscillation_frequency`` channel is the load-bearing phase),
+    and pair it with a server-only truth sidecar. Simulation level only."""
+    n = int(round(t_end / dt))
+    t = np.linspace(0.0, n * dt, n + 1)
+    f_true = oscillation_frequency_true(coord)
+    y = _OSC_MEAN + _OSC_AMPLITUDE * np.sin(2.0 * math.pi * f_true * t)
+    if noise_sd > 0.0:
+        rng = np.random.default_rng(seed)
+        y = np.maximum(y + rng.normal(0.0, noise_sd, size=y.shape), 0.0)
+    pheno = derive_phenotype(t, y, value_key="oscillation_frequency")
+    truth_record = {
+        "profile": "oscillatory",
+        "coord": float(coord),
+        "frequency_true": f_true,
+        "noise_sd": noise_sd,
+        "seed": seed,
+    }
+    return pheno, truth_record

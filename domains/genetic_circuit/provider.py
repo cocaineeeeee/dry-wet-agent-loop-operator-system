@@ -64,8 +64,16 @@ _SEED_CLAIMS: tuple[SeedClaim, ...] = (
 
 def _circuit_catalogue() -> dict[str, tuple[float, dict]]:
     """circuit_id -> (design coord, serialised graph payload). The v0.1 candidate pool: the
-    three-rung expression-cassette dose ladder + two toggle-switch tunings (the first dynamic
-    milestone). All are public design knowledge (NOT truth)."""
+    three-rung expression-cassette promoter ladder + two toggle-switch tunings (the first dynamic
+    milestone). Both families BAKE their design coord into the graph kinetics at construction, so
+    the dry proxy is coord-correct through mcl WITHOUT a separate condition param.
+
+    The deepened library adds dose-response / feed-forward / oscillator families, exercised in
+    tests + the domain-local e2e; the dose-response and oscillator families are NOT in this
+    steady-state claim pool because they need an mcl seam this pass does not own: dose-response
+    needs the applied INDUCER DOSE threaded as a run CONDITION into the circuit dry leg (mcl's
+    `_circuit_candidate_params` does not yet carry a per-candidate condition), and the oscillator
+    reads a different observable (frequency, not settled level). SEAM: docs/bio_seams/M26.md."""
     cat: dict[str, tuple[float, dict]] = {}
     for cid, coord, graph in cassette_ladder():
         cat[cid] = (coord, graph.to_payload())

@@ -63,7 +63,9 @@ from typing import Any, Callable, Mapping
 
 import numpy as np
 
+from expos.adapters.base import RawResult
 from expos.adapters.domain_provider import (
+    INPUT_KIND_CIRCUIT_TOPOLOGY,
     INPUT_KIND_MOLECULAR_GEOMETRY,
     INPUT_KIND_SEQUENCE_CONSTRUCT,
     INPUT_KIND_SEQUENCE_FEATURES,
@@ -71,9 +73,14 @@ from expos.adapters.domain_provider import (
 )
 from expos.adapters.dry.adapter import PySCFDryAdapter
 from expos.adapters.dry.catalysts import catalyst_params
+from expos.adapters.dry.circuit_adapter import CircuitTopologyAdapter
 from expos.adapters.dry.ingest import dry_raw_to_observations
 from expos.adapters.dry.sequence_adapter import SequenceProxyAdapter
 from expos.adapters.ingest import raw_to_observations
+from expos.adapters.wet.timeseries_reader import (
+    DEFAULT_DYNAMIC_PROFILE,
+    read_dynamic,
+)
 from expos.adapters.wet import sim_reader
 from expos.adapters.wet.bio_readout import (
     baselines_from_controls,
@@ -236,6 +243,11 @@ _DRY_METRIC_RANGE: tuple[float, float] = (0.0, 10.0)
 #: literal; wide enough to admit the whole proxy band so a healthy proxy is TRUSTED.
 _SEQ_DRY_METRIC_RANGE: tuple[float, float] = (0.0, 10.0)
 
+#: QC range for the CIRCUIT dry leg's ``dynamic_proxy`` (a small non-negative dynamic
+#: scalar: cassette steady-state ~[0, 1.1] / toggle bistable separation). Capability-scoped
+#: (M26), NOT a domain literal; generous upper bound so a healthy proxy stays TRUSTED.
+_CIRCUIT_DRY_METRIC_RANGE: tuple[float, float] = (0.0, 10.0)
+
 #: The dry-leg ``adapter_capability`` values that route to the SYNCHRONOUS in-process
 #: :class:`SequenceProxyAdapter` (as opposed to the async-job PySCF leg). These are
 #: Contract-v3 ``input_kind`` capabilities, NOT domain names — the dry-leg dispatch keys
@@ -244,6 +256,22 @@ _SEQUENCE_CAPABILITIES: tuple[str, ...] = (
     INPUT_KIND_SEQUENCE_CONSTRUCT,
     INPUT_KIND_SEQUENCE_FEATURES,
 )
+
+#: The dry-leg capabilities that route to the SYNCHRONOUS in-process
+#: :class:`CircuitTopologyAdapter` (M26 v0.1: verify -> simulate -> derive dynamic
+#: phenotype), AND select the in-process DYNAMIC wet reader (``timeseries_reader``) in
+#: place of the scalar socket ``sim_reader``. Capability constant, not a domain name.
+_CIRCUIT_CAPABILITIES: tuple[str, ...] = (INPUT_KIND_CIRCUIT_TOPOLOGY,)
+
+#: Capabilities whose Candidate ``params`` are built by forwarding the provider's neutral
+#: ComputeTarget payload (sequence construct OR typed circuit graph), as opposed to the
+#: geometry ``catalyst_params`` expansion. Union of the payload-carrying capabilities.
+_PAYLOAD_PARAM_CAPABILITIES: tuple[str, ...] = _SEQUENCE_CAPABILITIES + _CIRCUIT_CAPABILITIES
+
+#: Candidate ``params`` key carrying the serialised typed circuit graph (M26): the whole
+#: ``CircuitGraph.to_payload()`` dict rides under this key, which the dry
+#: ``CircuitTopologyAdapter`` reads. A capability payload-schema key, not a domain name.
+_TOPOLOGY_PARAMS_KEY = "circuit_topology"
 
 #: Candidate ``params`` key carrying a construct's DESIGN lineage (M24 item #4). A NEW,
 #: dedicated field — deliberately NOT ``Candidate.parent_obs_id`` (whose semantics are
@@ -438,11 +466,11 @@ def _domain_bindings(cfg: DomainConfig) -> _DomainBindings:
         seeds = cfg.seed_claims or []
         higher = tuple(_hyp_id_for(c.claim_id) for c in seeds if c.direction == "higher")
         lower = tuple(_hyp_id_for(c.claim_id) for c in seeds if c.direction == "lower")
-        # A geometry-free (sequence) domain builds its candidate params from the
-        # provider's ComputeTarget payload (sequence + components), not a geometry table;
-        # gate on the CAPABILITY (never the domain name). molecular_geometry keeps the
-        # existing descriptor/geometry path byte-identical.
-        is_sequence = capability in _SEQUENCE_CAPABILITIES
+        # A geometry-free (sequence / circuit) domain builds its candidate params from the
+        # provider's neutral ComputeTarget payload (sequence components OR typed circuit
+        # graph), not a geometry table; gate on the CAPABILITY (never the domain name).
+        # molecular_geometry keeps the existing descriptor/geometry path byte-identical.
+        is_payload = capability in _PAYLOAD_PARAM_CAPABILITIES
         provider = getattr(cfg, "_provider", None)
         return _DomainBindings(
             variable=var.name,
@@ -461,10 +489,10 @@ def _domain_bindings(cfg: DomainConfig) -> _DomainBindings:
             higher_hyp_ids=higher,
             lower_hyp_ids=lower,
             fixed_conditions={},
-            params_kind="sequence" if is_sequence else "descriptor",
+            params_kind=_params_kind_for(capability),
             dry_capability=capability,
             compute_targets=(
-                dict(provider.compute_targets()) if is_sequence and provider else None
+                dict(provider.compute_targets()) if is_payload and provider else None
             ),
         )
     # ---- LEGACY FALLBACK (solvent_screen byte-identical; see constants block above).
@@ -485,8 +513,21 @@ def _domain_bindings(cfg: DomainConfig) -> _DomainBindings:
     )
 
 
+def _params_kind_for(capability: str) -> str:
+    """Map a dry ``adapter_capability`` to the Candidate-``params`` build strategy, keyed on
+    the neutral capability constant (never a domain name). ``sequence_*`` -> ``"sequence"``
+    (forward the sequence-construct payload), ``circuit_topology`` -> ``"circuit"`` (forward
+    the typed-graph payload under ``circuit_topology``), everything else -> ``"descriptor"``
+    (the geometry/catalyst_params path, byte-identical for chemistry)."""
+    if capability in _SEQUENCE_CAPABILITIES:
+        return "sequence"
+    if capability in _CIRCUIT_CAPABILITIES:
+        return "circuit"
+    return "descriptor"
+
+
 def _candidate_params(level: str, bindings: _DomainBindings) -> dict[str, Any]:
-    """Build a Candidate's ``params`` for a screening level. Three paths, selected by
+    """Build a Candidate's ``params`` for a screening level. Paths selected by
     ``params_kind`` (itself set from the dry CAPABILITY, never a domain name):
 
       * ``"sequence"`` — a geometry-free construct: forward the level's Contract-v3
@@ -494,15 +535,40 @@ def _candidate_params(level: str, bindings: _DomainBindings) -> dict[str, Any]:
         ``SequenceProxyAdapter`` reads, stamp the screening-var key, and lift any lineage
         keys (parent_construct/sequence_version) into the dedicated ``_LINEAGE_PARAMS_KEY``
         field (M24 item #4: store-only design lineage, NOT ``parent_obs_id``).
+      * ``"circuit"`` — a typed circuit graph (M26): forward the level's ComputeTarget
+        payload (``CircuitGraph.to_payload()``) under the ``circuit_topology`` key the SYNC
+        ``CircuitTopologyAdapter`` reads (verify -> simulate -> derive), stamp the
+        screening-var key.
       * ``"descriptor"`` — a geometry domain: expand via ``catalysts.catalyst_params``
         (carries the explicit ``geometry`` the unchanged PySCF adapter reads).
       * legacy solvent — the level + recorded protocol conditions (byte-identical to pre-M20).
     """
     if bindings.params_kind == "sequence":
         return _sequence_candidate_params(level, bindings)
+    if bindings.params_kind == "circuit":
+        return _circuit_candidate_params(level, bindings)
     if bindings.params_kind == "descriptor":
         return catalyst_params(level)
     return {bindings.variable: level, **bindings.fixed_conditions}
+
+
+def _circuit_candidate_params(level: str, bindings: _DomainBindings) -> dict[str, Any]:
+    """Candidate ``params`` for a circuit-topology level (M26), built from the provider's
+    neutral ComputeTarget payload — mcl reads a capability payload, never a circuit table.
+    The whole serialised graph rides under the ``circuit_topology`` key (what the dry
+    ``CircuitTopologyAdapter`` reads); the screening-var key carries the level so
+    ``_build_dry_view`` / ``_record_proposal`` / the wet leg read it."""
+    targets = bindings.compute_targets or {}
+    target = targets.get(level)
+    if target is None:
+        raise MCLError(
+            f"circuit level {level!r} has no compute target in domain "
+            f"{bindings.variable!r}; every screened level must be a declared circuit"
+        )
+    return {
+        _TOPOLOGY_PARAMS_KEY: dict(target.payload),
+        bindings.variable: level,
+    }
 
 
 def _sequence_candidate_params(level: str, bindings: _DomainBindings) -> dict[str, Any]:
@@ -855,6 +921,16 @@ def _make_dry_leg_plan(
             metric_range=_SEQ_DRY_METRIC_RANGE,
             kind="sync_execute",
         )
+    if adapter_accepts_capability(CircuitTopologyAdapter, cap):
+        # M26: the typed-circuit dry leg is the DYNAMIC-phenotype analogue of the sequence
+        # sync leg — verify -> simulate -> derive, in-process, NO compute lease / subprocess.
+        return _DryLegPlan(
+            adapter=CircuitTopologyAdapter(),
+            capability=cap,
+            metric=CircuitTopologyAdapter.default_metric,
+            metric_range=_CIRCUIT_DRY_METRIC_RANGE,
+            kind="sync_execute",
+        )
     raise MCLError(
         f"domain {cfg.name!r}: no dry adapter accepts capability {cap!r} "
         f"(compute_targets adapter_capability); register an adapter that declares it"
@@ -1011,6 +1087,44 @@ def _wet_experiment(
     )
 
 
+def _dynamic_wet_observations(
+    wet_cands: list[Candidate],
+    wet_exp: ExperimentObject,
+    bindings: _DomainBindings,
+    profile: str,
+    wet_metric: str,
+    wet_unit: str,
+) -> list:
+    """M26 wet leg: the in-process DYNAMIC time-series reader in place of the scalar socket
+    ``sim_reader``. For each compiled deck well, read the hidden dynamic-truth reporter trace
+    for the well's design coordinate (``timeseries_reader.read_dynamic``) and DERIVE its
+    dynamic phenotype — the SAME ``derive_phenotype`` the dry leg uses, so both legs summarise
+    a trace identically (M26.md SEAM 2). The load-bearing dynamic scalar rides in as
+    ``RawResult.value``; the {steady_state, response_amplitude, switching_time, separation}
+    summary rides in ``secondary`` — the kernel only ever sees numbers. Truth isolation: the
+    reader's settled-level/noise sidecar is discarded here (never on the OS path).
+    Deterministic (``noise_sd=0``), mirroring the socket reader's ``noise_sd=0.0``. Selected
+    ONLY for a ``circuit_topology`` capability (gated), so every other domain (chemistry /
+    M24-B / sequence) keeps the byte-identical socket wet leg."""
+    cand_by_id = {c.cand_id: c for c in wet_cands}
+    raws: list[RawResult] = []
+    for idx, w in enumerate(wet_exp.layout.wells):
+        cand = cand_by_id.get(w.cand_id)
+        if cand is None:
+            continue  # a control well (M26 v0.1 declares none)
+        level = cand.params[bindings.variable]
+        coord = bindings.coords[level]
+        pheno, _truth_sidecar = read_dynamic(coord, profile=profile, noise_sd=0.0)
+        raws.append(
+            RawResult(
+                well_id=w.well_id, cand_id=w.cand_id, control_id=w.control_id,
+                metric=wet_metric, value=pheno.value, unit=wet_unit,
+                secondary=pheno.secondary(), capture_index=idx,
+            )
+        )
+    return raw_to_observations(wet_exp, raws, raw_kind="wet")
+
+
 def _qc_runner(metric_range: tuple[float, float], seed: int):
     """Adapt ``run_qc`` to the QCPolicy contract, scoping history to the same
     experiment so the two channels never cross-contaminate each other's QC."""
@@ -1154,7 +1268,12 @@ def run_mcl_loop(
     ``truth_profile`` (letter 075 ruling) is an EVALUATION-HARNESS surface: it
     selects the reader's hidden truth face and is threaded to ``sim_reader.serve``
     only — it never enters DomainConfig / domain YAML (truth stays off the OS
-    path). ``None`` => the default face (byte-identical to M16).
+    path). ``None`` => the default face (byte-identical to M16). For a DYNAMIC
+    (``circuit_topology``) domain (M26) it instead selects the DYNAMIC face of the
+    in-process ``timeseries_reader`` (``dynamic_high`` / ``dynamic_flipped`` /
+    ``dynamic_flat``); the socket sim_reader is then started on its default scalar
+    face (unused) so it never sees a dynamic-face literal — every non-circuit domain
+    is byte-identical.
 
     ``resume`` reconstructs the claim ledger from the persisted checkpoint snapshot
     and continues from the last completed round WITHOUT re-emitting the prior
@@ -1228,10 +1347,23 @@ def run_mcl_loop(
     # truth_profile is an evaluation-harness selector threaded ONLY to serve() —
     # None reproduces the M16 default face byte-for-byte (mcl.py is not an
     # EXP001-guarded package; the reader's hidden face never reaches the OS path).
+    # M26: a DYNAMIC (circuit_topology) domain reads its wet phenotype in-process via the
+    # time-series reader, NOT the scalar socket sim_reader. Gate on the capability (never a
+    # domain name): the socket reader is still started (on the DEFAULT scalar face, unused by
+    # the dynamic wet leg) so the run-level machinery is unchanged, while the requested
+    # ``truth_profile`` selects the dynamic FACE for the in-process reader. sim_reader thus
+    # never sees a dynamic-face literal, and every non-circuit domain is byte-identical.
+    dynamic_wet = bindings.dry_capability in _CIRCUIT_CAPABILITIES
+    dynamic_profile = DEFAULT_DYNAMIC_PROFILE if truth_profile is None else truth_profile
+    sim_truth_profile = (
+        DEFAULT_TRUTH_PROFILE
+        if (truth_profile is None or dynamic_wet)
+        else truth_profile
+    )
     port = _free_port()
     srv = sim_reader.serve(
         reader_host, port, seed=derive_seed(seed, "reader"), noise_sd=0.0,
-        truth_profile=(DEFAULT_TRUTH_PROFILE if truth_profile is None else truth_profile),
+        truth_profile=sim_truth_profile,
     )
     reader_thread = threading.Thread(target=srv.serve_forever, daemon=True)
     reader_thread.start()
@@ -1316,6 +1448,7 @@ def run_mcl_loop(
                 certification, cross_round_state, reader_host, port,
                 agent_strategy, bindings, resume_consume=round_consume,
                 interrupt_hook=interrupt_hook, physical_backend=physical_backend,
+                dynamic_wet=dynamic_wet, dynamic_profile=dynamic_profile,
             )
             store.write_checkpoint({
                 "completed_rounds": round_id + 1, "domain": cfg.name,
@@ -1503,6 +1636,8 @@ def _run_round(
     resume_consume: tuple[str, list] | None = None,
     interrupt_hook: Callable[[str, int], None] | None = None,
     physical_backend: SensedState | None = None,
+    dynamic_wet: bool = False,
+    dynamic_profile: str = DEFAULT_DYNAMIC_PROFILE,
 ) -> tuple[Ledger, dict[str, Any] | None]:
     """One full pipeline pass (knowledge -> agent -> dry -> promotion -> wet ->
     certification). Consumes the current claim ``ledger`` for knowledge compile and
@@ -1648,14 +1783,24 @@ def _run_round(
             "n_wells": len(wet_exp.layout.wells),
         })
         try:
-            wet_obs, _wet_result = run_wet_leg(
-                wet_exp, otp, host=reader_host, port=port,
-                wet_metric=cfg.objective.metric,
-                # M23 Phase 4 closeout (letter 132): stamp the domain-declared unit
-                # onto wet observations so the T4 ingest gate is live end-to-end.
-                # Domains without metric_units yield "" -- byte-identical legacy.
-                wet_unit=(cfg.metric_units or {}).get(cfg.objective.metric, ""),
-            )
+            if dynamic_wet:
+                # M26: read the DYNAMIC phenotype in-process (time-series reader) instead of
+                # the scalar socket sim_reader. Gated on the circuit capability, so every
+                # other domain takes the byte-identical socket path below.
+                wet_obs = _dynamic_wet_observations(
+                    wet_cands, wet_exp, bindings, dynamic_profile,
+                    cfg.objective.metric,
+                    (cfg.metric_units or {}).get(cfg.objective.metric, ""),
+                )
+            else:
+                wet_obs, _wet_result = run_wet_leg(
+                    wet_exp, otp, host=reader_host, port=port,
+                    wet_metric=cfg.objective.metric,
+                    # M23 Phase 4 closeout (letter 132): stamp the domain-declared unit
+                    # onto wet observations so the T4 ingest gate is live end-to-end.
+                    # Domains without metric_units yield "" -- byte-identical legacy.
+                    wet_unit=(cfg.metric_units or {}).get(cfg.objective.metric, ""),
+                )
         finally:
             leases.release(instr_lease)
         # M23 Phase 4-B: when a physical backend is injected, wrap the transfers through the
@@ -1677,11 +1822,14 @@ def _run_round(
                  TrustPolicy(cfg.trust.suspect_high, cfg.trust.quarantine_low)).judge(
             store, wet_obs, wet_exp)
 
-        # Truth harvested OFF the OS path (scoring only) and persisted opaquely.
+        # Truth harvested OFF the OS path (scoring only) and persisted opaquely. The DYNAMIC
+        # wet leg's truth sidecar is in-process (discarded per-read in v0.1), so only the
+        # socket sim_reader path harvests here — a circuit run persists no scalar truth.
         try:
-            truth = harvest_truth(host=reader_host, port=port)
-            if truth:
-                store.save_truth(round_id, truth)
+            if not dynamic_wet:
+                truth = harvest_truth(host=reader_host, port=port)
+                if truth:
+                    store.save_truth(round_id, truth)
         except (OSError, ConnectionError) as exc:
             # Truth harvest is a scoring-side convenience, never a decision input;
             # its failure must not fail the OS round, but it is logged (not silent).

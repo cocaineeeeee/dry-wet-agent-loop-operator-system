@@ -19,6 +19,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from datasets.replay.real_perturbseq_benchmark import (
+    RealBenchmarkTable,
+    real_baseline_gate,
+)
 from datasets.replay.synthetic_perturbseq import make_replay_dataset
 from domains.perturbation.causal import (
     certify_causal_claims,
@@ -30,12 +34,14 @@ from domains.perturbation.objects import (
     PerturbationCausalClaim,
 )
 from domains.perturbation.provider import PerturbationScreenProvider
-from domains.perturbation.run_v01 import run_regime
+from domains.perturbation.run_v01 import real_benchmark_crosscheck, run_regime
 from expos.adapters.domain_provider import DomainProvider
 from expos.adapters.models import (
+    EnsembleBackend,
     KNNResponseBackend,
     LinearResponseBackend,
     MeanBaselineBackend,
+    PathwayInformedBackend,
     solve_y_axb,
 )
 from expos.adapters.models.virtual_cell import BioModelBackend, PerturbationBatch
@@ -256,3 +262,149 @@ def test_selection_changes_with_knowledge():
     for regime in ("informative", "scrambled"):
         rep = run_regime(regime)
         assert rep["selection_changed"] is True, regime
+
+
+# --------------------------------------------------------------- five-backend grid
+
+
+def _fit_five(regime="informative"):
+    ds = make_replay_dataset(seed=27, n_pert=60, regime=regime, n_ood=6)
+    batch = ds.subset(
+        [p.pert_id for p in ds.perturbations if not p.pert_id.startswith("OOD_")]
+    ).to_batch()
+    backends = [
+        MeanBaselineBackend().fit(batch),
+        LinearResponseBackend().fit(batch),
+        KNNResponseBackend().fit(batch),
+        PathwayInformedBackend().fit(batch),
+        EnsembleBackend().fit(batch),
+    ]
+    return ds, batch, backends
+
+
+def test_five_backends_predict_a_distribution():
+    """The competition grid is now the full bio_refs §3 set: 2 baselines + 3 candidates,
+    each emitting a genuine per-axis distribution."""
+    ds, batch, backends = _fit_five()
+    names = [b.name for b in backends]
+    assert names == [
+        "mean_baseline", "linear_response", "knn_response",
+        "pathway_informed", "ensemble",
+    ]
+    for b in backends:
+        preds = b.predict(batch)
+        assert len(preds) == batch.n
+        assert preds[0].mean.shape == (ds.dim,) and preds[0].std.shape == (ds.dim,)
+        assert np.all(preds[0].std > 0.0)
+    # pathway + ensemble are CANDIDATES (must clear the gate), not baselines.
+    flags = {b.name: b.is_baseline for b in backends}
+    assert flags["pathway_informed"] is False and flags["ensemble"] is False
+
+
+def test_pathway_fingerprint_reflects_pathway_prior():
+    """Which pathway annotation was used enters the fingerprint (charter: impl versions ->
+    provenance) -- two different priors give different fingerprints."""
+    _, batch, _ = _fit_five()
+    G = batch.deltas.shape[1]
+    p_a = PathwayInformedBackend(pathway_of=np.zeros(G, dtype=int)).fit(batch)
+    p_b = PathwayInformedBackend(pathway_of=np.arange(G) % 4).fit(batch)
+    assert p_a.fingerprint() != p_b.fingerprint()
+
+
+def test_ensemble_uncertainty_carries_epistemic_disagreement():
+    """The ensemble std combines within-model width with member DISAGREEMENT (epistemic):
+    its per-axis std is never below the tightest member and exceeds the pure-aleatoric
+    floor where members disagree."""
+    _, batch, backends = _fit_five()
+    members = backends[:3]  # mean, linear, knn
+    ens = EnsembleBackend(members=[type(m)() for m in members]).fit(batch)
+    x = batch.embeddings[0]
+    ep = ens.predict(PerturbationBatch(pert_ids=("q",), embeddings=x[None, :]))[0]
+    member_stds = np.stack([m._predict_one("q", x).std for m in ens._members])
+    aleatoric = np.sqrt((member_stds**2).mean(axis=0))
+    # never tighter than the pure aleatoric floor, and strictly wider on some axes.
+    assert np.all(ep.std + 1e-9 >= aleatoric)
+    assert np.any(ep.std > aleatoric + 1e-6)
+
+
+def test_full_grid_gate_is_discriminative_across_candidates():
+    """With three candidate backends, the gate ADMITS at least one on the informative
+    regime and admits NONE on the scrambled regime (every candidate -> negative claim)."""
+    info = run_regime("informative")
+    scr = run_regime("scrambled")
+    assert len(info["admitted_backends"]) >= 1
+    assert "knn_response" in info["admitted_backends"]
+    assert scr["admitted_backends"] == []
+    # every scrambled candidate carries a first-class negative claim.
+    for g in scr["baseline_gate"]:
+        assert g["admitted"] is False
+        assert g["negative_claim"] is not None
+        assert g["negative_claim"]["kind"] == "baseline_gate_negative"
+
+
+# --------------------------------------------------------------- deepened calibration
+
+
+def test_calibration_curve_and_proper_scores_are_populated():
+    """Calibration is a CURVE (coverage at several sigma) plus proper scores (ECE, NLL,
+    sharpness) -- not a single 1-sigma point."""
+    _, batch, backends = _fit_five()
+    ds = make_replay_dataset(seed=27, n_pert=60, regime="informative", n_ood=0)
+    held = ds.to_batch()
+    for b in backends:
+        s = score_backend(b, held)
+        assert len(s.coverage_curve) == 4
+        assert all(0.0 <= c <= 1.0 for c in s.coverage_curve)
+        assert s.calibration_ece >= 0.0
+        assert s.sharpness > 0.0
+        assert np.isfinite(s.gaussian_nll)
+
+
+# --------------------------------------------------------------- REAL Perturb-seq benchmark
+
+
+def test_real_benchmark_is_marked_non_wet():
+    """The real published Perturb-seq benchmark is retrospective benchmark/calibration
+    ONLY -- is_wet_observation is hard-False for every dataset (charter §4)."""
+    t = RealBenchmarkTable.load()
+    assert set(t.datasets()) >= {"adamson", "replogle_k562_essential", "replogle_rpe1_essential"}
+    for ds in t.datasets():
+        prov = t.provenance(ds)
+        assert prov.is_wet_observation is False
+        assert prov.validation_level == "retrospective"
+        assert prov.role == "benchmark_calibration"
+        assert "Ahlmann-Eltze" in prov.source and "Zenodo" in prov.source
+    # scope is a real cell-line context boundary (folds into the fingerprint).
+    assert "K562" in t.provenance("replogle_k562_essential").scope
+    assert "RPE1" in t.provenance("replogle_rpe1_essential").scope
+
+
+def test_real_benchmark_fingerprint_folds_scope():
+    t = RealBenchmarkTable.load()
+    fps = {ds: t.fingerprint(ds) for ds in t.datasets()}
+    assert len(set(fps.values())) == len(fps)  # distinct datasets -> distinct fingerprints
+
+
+def test_real_baseline_gate_confirms_no_consistent_winner():
+    """The SAME baseline-gate logic on the REAL published numbers reproduces the paper's
+    headline: no method clears the mean-baseline gate on ALL datasets, and the flagship
+    foundation model (scgpt) clears on NONE. This is the external, real-data grounding of
+    the synthetic gate (bio_refs §1)."""
+    t = RealBenchmarkTable.load()
+    cleared_on = {}  # method -> set of datasets it clears
+    for ds in t.datasets():
+        for v in real_baseline_gate(t, ds):
+            if v.admitted:
+                cleared_on.setdefault(v.method, set()).add(ds)
+    n_ds = len(t.datasets())
+    # no method clears on every dataset (no consistent winner).
+    assert all(len(dss) < n_ds for dss in cleared_on.values())
+    # scgpt (flagship foundation model) never clears.
+    assert "scgpt" not in cleared_on
+
+
+def test_real_benchmark_crosscheck_report_is_honest():
+    rep = real_benchmark_crosscheck()
+    assert rep["replogle_rpe1_essential"]["is_wet_observation"] is False
+    assert rep["replogle_rpe1_essential"]["any_method_cleared"] is False
+    assert "no method clears" in rep["conclusion"]

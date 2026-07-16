@@ -32,6 +32,7 @@ from expos.adapters.artifacts import validate_scenario
 from expos.adapters.base import AdapterError, ExecutionAdapter
 from expos.adapters.bench_manual import BenchManualAdapter
 from expos.adapters.dry.adapter import PySCFDryAdapter
+from expos.adapters.dry.circuit_adapter import CircuitTopologyAdapter
 from expos.adapters.dry.sequence_adapter import SequenceProxyAdapter
 from expos.adapters.sim_coating import CoatingSim
 from expos.adapters.sim_crystal import CrystalSim
@@ -470,6 +471,12 @@ ADAPTER_REGISTRY: dict[str, type] = {
     # Registering it lets ``load_domain(domains/cell_free_expression_screen.yaml)`` pass the
     # adapter gate, the exact staging precedent solvent/catalyst sat in.
     "sequence_proxy": SequenceProxyAdapter,
+    # M26: the genetic-circuit dry leg (typed circuit graph -> dynamic phenotype). Same
+    # DUAL-LEG staging as sequence_proxy -- synchronous/in-process, driven out-of-band by
+    # ``--loop mcl`` (NEVER through build_adapter), selected by the ``circuit_topology``
+    # capability. Registering it lets ``load_domain(domains/genetic_circuit/...)`` pass the
+    # adapter gate (the exact staging precedent cell_free_expression sat in).
+    "circuit_topology": CircuitTopologyAdapter,
 }
 
 #: The DUAL-LEG dry-compute adapters (M16/M24): they screen the dry leg of the
@@ -484,7 +491,9 @@ ADAPTER_REGISTRY: dict[str, type] = {
 #:     dry-channel metric (``expression_proxy`` / dipole) consumed only by mcl's dry leg, so
 #:     the two legitimately differ (``pyscf_dry`` sidesteps this by declaring no
 #:     ``default_metric``; ``sequence_proxy`` declares one, so the skip must be explicit).
-_DUAL_LEG_DRY_ADAPTERS: frozenset[type] = frozenset({PySCFDryAdapter, SequenceProxyAdapter})
+_DUAL_LEG_DRY_ADAPTERS: frozenset[type] = frozenset(
+    {PySCFDryAdapter, SequenceProxyAdapter, CircuitTopologyAdapter}
+)
 
 
 def load_domain(path: str | Path) -> DomainConfig:
@@ -560,11 +569,20 @@ def load_provider(cfg: DomainConfig) -> "DomainProvider":
     spec = cfg.provider
     assert spec is not None  # caller guards; format already validated on the field
     module_path, _, class_name = spec.partition(":")
-    if module_path != "expos" and not module_path.startswith("expos."):
+    # The provider module MUST live inside an IN-TREE trusted package: ``expos.`` (the OS
+    # core + A-side providers) or ``domains.`` (the breadth-first Biology Program Team domain
+    # packages, BIOLOGY_PROGRAM_2026 §1.5 -- genetic_circuit / perturbation live here). Both
+    # are explicit dotted locators resolved via importlib; we still do NOT scan the filesystem
+    # or pip entry_points (INDEX_M21_DOMAINPLUGIN's discovery rejection). An off-tree module
+    # path is rejected before any import so a domain yaml can never pull code from outside the
+    # repository's trusted packages.
+    top = module_path.partition(".")[0]
+    if top not in ("expos", "domains"):
         raise DomainError(
-            f"provider module {module_path!r} must live under the 'expos.' package "
-            "(declarative loading is an explicit in-tree yaml locator, not filesystem "
-            "or entry_point discovery); refusing to import an off-tree module"
+            f"provider module {module_path!r} must live under an in-tree trusted package "
+            "('expos.' OS core / 'domains.' Team domain packages); declarative loading is an "
+            "explicit in-tree yaml locator, not filesystem or entry_point discovery; refusing "
+            "to import an off-tree module"
         )
     try:
         module = importlib.import_module(module_path)

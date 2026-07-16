@@ -27,6 +27,7 @@ import pytest
 import yaml
 
 from domains.genetic_circuit import library as lib
+from domains.genetic_circuit import sbol_adapt
 from domains.genetic_circuit.graph import CircuitGraph, circuit_from_payload
 from domains.genetic_circuit.provider import (
     INPUT_KIND_CIRCUIT_TOPOLOGY,
@@ -39,6 +40,8 @@ from expos.adapters.domain_provider import (
 )
 from expos.adapters.dry.circuit_adapter import CircuitTopologyAdapter, circuit_params
 from expos.adapters.dry.circuit_dynamics import (
+    ec50_from_curve,
+    oscillation_frequency,
     response_amplitude,
     steady_state,
     switching_time,
@@ -47,7 +50,9 @@ from expos.adapters.dry.circuit_simulation import simulate
 from expos.adapters.wet.timeseries_reader import (
     DYNAMIC_TRUTH_PROFILES,
     DynamicTruthSurface,
+    oscillation_frequency_true,
     read_dynamic,
+    read_oscillation,
 )
 from expos.domain import DomainConfig
 from expos.kernel.objects import (
@@ -112,9 +117,16 @@ def test_payload_roundtrip_and_functional_revision():
 
 
 def test_verify_passes_legal_circuits_all_five_levels():
-    """Both preset families pass all five verify levels (execution->validity->structure->
-    semantics->function motif), highest_passed == function."""
-    for g in (lib.expression_cassette(1.0), lib.toggle_switch(1.0)):
+    """All FIVE preset families pass all five verify levels (execution->validity->structure->
+    semantics->function motif), highest_passed == function -- the motif detector now covers the
+    canonical family (cassette / dose-response / toggle / feed-forward loop / oscillator)."""
+    for g in (
+        lib.expression_cassette(1.0),
+        lib.dose_response(1.0),
+        lib.toggle_switch(1.0),
+        lib.feed_forward_loop(),
+        lib.repressilator(1.0),
+    ):
         rep = verify(g)
         assert rep.ok, rep.as_dict()
         assert rep.highest_passed == "function"
@@ -136,6 +148,12 @@ def test_verify_rejects_illegal_topologies_at_correct_level():
     assert not broken.ok
     assert broken.failed_level == "function"           # structure/semantics passed
     assert broken.highest_passed == "semantics"
+
+    # an oscillator whose repression graph is only a 2-cycle (even) lacks the odd-cycle motif.
+    even = verify(lib.broken_repressilator_even_cycle())
+    assert not even.ok
+    assert even.failed_level == "function"
+    assert even.highest_passed == "semantics"
 
 
 # ============================================================ 3. simulation determinism
@@ -271,6 +289,7 @@ def test_dry_adapter_execute_emits_value_secondary_no_truth_no_mutation():
     assert raw.value == pytest.approx(adapter.compute(params).value)
     assert set(raw.secondary) == {
         "steady_state", "response_amplitude", "switching_time", "separation",
+        "oscillation_frequency",
     }
     assert exp.model_dump() == before
 
@@ -349,3 +368,158 @@ def test_compute_targets_are_circuit_topology_and_yaml_mismatch_rejected():
         variables=[SimpleNamespace(name="circuit", choices=["cassette_pTet_J23100", "nope"])]))
     with pytest.raises(DomainProviderError, match="choices must equal"):
         p.validate_yaml(fake_cfg)
+
+
+# ============================================================ 9. dose-response circuit family
+
+
+def test_dose_response_monotone_and_ec50():
+    """The inducible dose-response element (external IPTG input activating the reporter) rises
+    monotonically with the applied dose (design coord), and the cross-candidate EC50 derivation
+    finds the half-maximal dose strictly inside the ladder -- a derived phase that lives ACROSS
+    candidates, not within one trace."""
+    adapter = CircuitTopologyAdapter()
+    ladder = lib.dose_ladder((0.1, 0.4, 0.7, 1.0))
+    doses = [d for _cid, d, _g in ladder]
+    responses = [adapter.compute(circuit_params(g.to_payload(), coord=d)).value
+                 for _cid, d, g in ladder]
+    assert all(b > a for a, b in zip(responses, responses[1:]))       # monotone in dose
+    ec50 = ec50_from_curve(np.array(doses), np.array(responses))
+    assert doses[0] < ec50 < doses[-1]                                 # half-max inside window
+    # zero dose gives basal only; full dose is much higher (induction real).
+    off = adapter.compute(circuit_params(lib.dose_response(0.0).to_payload(), coord=0.0)).value
+    on = responses[-1]
+    assert on > 3.0 * off
+
+
+# ============================================================ 10. oscillator dry frequency
+
+
+def test_oscillation_frequency_derivation_and_flat_zero():
+    """The oscillation-frequency derivation reads a sustained sinusoid's frequency and returns
+    an honest 0.0 for a monotone-rise or flat trace (no oscillation) -- so it never fabricates a
+    frequency for a non-oscillatory phenotype."""
+    t = np.linspace(0.0, 100.0, 2001)
+    y = 5.0 + 3.0 * np.sin(2.0 * np.pi * 0.15 * t)
+    assert oscillation_frequency(t, y) == pytest.approx(0.15, abs=0.01)
+    # a monotone rise and a flat baseline both read zero frequency.
+    rise = 50.0 * (1.0 - np.exp(-t / 5.0))
+    assert oscillation_frequency(t, rise) == pytest.approx(0.0)
+    assert oscillation_frequency(t, np.full_like(t, 0.05)) == pytest.approx(0.0)
+
+
+def test_repressilator_dry_frequency_rises_with_coord():
+    """The dry repressilator ODE sustains oscillation and its derived frequency (the load-bearing
+    value for an oscillator) rises strictly with the design coordinate (coord tunes degradation)
+    -- so the Dry->Wet ranking signal for an oscillator is a real, monotone frequency knob."""
+    adapter = CircuitTopologyAdapter()
+    coords = [0.1, 0.4, 0.7, 1.0]
+    freqs = [adapter.compute(circuit_params(lib.repressilator(c).to_payload(), coord=c)).value
+             for c in coords]
+    assert all(f > 0.0 for f in freqs)                                 # all genuinely oscillate
+    assert all(b > a for a, b in zip(freqs, freqs[1:]))               # frequency rises with coord
+
+
+# ============================================================ 11. wet oscillatory read (derived phase)
+
+
+def test_wet_read_oscillation_frequency_tracks_coordinate():
+    """The wet oscillatory read derives a frequency that tracks the hidden TRUE coord->frequency
+    law (monotone), the oscillator analogue of the settled-level dynamic_high face -- deepening
+    the derived-phase discrimination to the oscillation-frequency phase on the WET side too."""
+    coords = [0.0, 0.3, 0.6, 1.0]
+    obs, truth = [], []
+    for c in coords:
+        pheno, rec = read_oscillation(c, noise_sd=0.0)
+        obs.append(pheno.oscillation_frequency)
+        truth.append(rec["frequency_true"])
+    assert all(b > a for a, b in zip(obs, obs[1:]))                    # observed freq monotone up
+    assert all(b > a for a, b in zip(truth, truth[1:]))               # hidden truth monotone up
+    # observed derived frequency is close to the hidden true frequency (derivation is faithful).
+    for o, tr in zip(obs, truth):
+        assert o == pytest.approx(tr, abs=0.02)
+    assert oscillation_frequency_true(1.0) > oscillation_frequency_true(0.0)
+
+
+# ============================================================ 12. SBOL-utilities technique ADAPT
+
+
+def test_sbol_adapt_topology_diff_and_complexity_score():
+    """The SBOL-borrowed (FORM only, no RDF) tools behave: topology_diff classifies a kinetics-
+    only revision as same-topology/kinetics-divergence and a part swap as a topology change; the
+    local complexity score is deterministic and monotone in circuit size (bigger = harder)."""
+    weak = lib.toggle_switch(0.4)
+    revised = weak.with_kinetics("tu_tetr", beta=99.0)
+    d = sbol_adapt.topology_diff(weak, revised)
+    assert d["same_topology"] and not d["same_parameters"]
+    assert d["first_divergence"] == "kinetics"
+    assert "tu_tetr" in d["kinetics_changed"] and "beta" in d["kinetics_changed"]["tu_tetr"]
+
+    # a genuinely different topology diverges at a coarser category than kinetics.
+    d2 = sbol_adapt.topology_diff(lib.expression_cassette(1.0), lib.toggle_switch(1.0))
+    assert not d2["same_topology"]
+    assert d2["first_divergence"] in ("parts", "units", "interactions")
+
+    # complexity score: deterministic + a bigger circuit (toggle) scores >= a small cassette.
+    s_cas = sbol_adapt.complexity_score(lib.expression_cassette(1.0))
+    s_tog = sbol_adapt.complexity_score(lib.toggle_switch(1.0))
+    assert sbol_adapt.complexity_score(lib.expression_cassette(1.0)) == s_cas   # deterministic
+    assert s_tog >= s_cas
+    ranking = sbol_adapt.manufacturability_ranking(
+        {"cas": lib.expression_cassette(1.0), "tog": lib.toggle_switch(1.0),
+         "repr": lib.repressilator(1.0)})
+    assert [cid for cid, _ in ranking][0] == "cas"                     # cheapest first
+
+
+# ============================================================ 13. domain-local e2e loop
+
+
+def _dynamic_direction(profile: str) -> str:
+    """Domain-local claim decision proxy (the mcl claim lifecycle is a B seam): read the wet
+    dynamic phenotype across the coord ladder and report the sign of the coord->phenotype
+    relation ('higher' / 'lower' / 'insufficient'). Mirrors what the aggregator will certify."""
+    coords = [0.1, 0.4, 0.7, 1.0]
+    phenos = [read_dynamic(c, profile=profile, noise_sd=0.0)[0].steady_state for c in coords]
+    r = float(np.corrcoef(coords, phenos)[0, 1]) if len(set(phenos)) > 1 else 0.0
+    if len(set(round(p, 9) for p in phenos)) == 1:
+        return "insufficient"
+    return "higher" if r > 0.5 else ("lower" if r < -0.5 else "insufficient")
+
+
+def test_domain_local_e2e_full_loop_closes_and_redesigns():
+    """A fuller DOMAIN-LOCAL end-to-end loop (the whole mcl ring awaits B's seams):
+    desired behaviour -> typed graph -> verify -> dry simulate -> wet time-series -> derived
+    dynamic claim -> parameter revision -> NEXT candidate that is genuinely different and better.
+
+    This closes DoD #7 domain-locally: the CHANGED knowledge (stronger design wins on the
+    dynamic_high face; the flat face is insufficient) changes the next proposal (a deeper-latch
+    parameter revision), and the topology diff attributes the change to kinetics."""
+    adapter = CircuitTopologyAdapter()
+
+    # 1-2. desired behaviour -> typed graph (a weak toggle) -> 3. verify passes.
+    weak = lib.toggle_switch(0.4)
+    assert verify(weak).ok
+
+    # 4. dry simulate -> a real (small) bistable separation.
+    sep_weak = adapter.compute(circuit_params(weak.to_payload(), coord=0.4)).value
+    assert sep_weak > 0.0
+
+    # 5-6. wet time-series -> derived dynamic claim decision on two faces.
+    assert _dynamic_direction("dynamic_high") == "higher"        # certifies gc_strongdesign
+    assert _dynamic_direction("dynamic_flipped") == "lower"      # the rejected mirror
+    assert _dynamic_direction("dynamic_flat") == "insufficient"  # null -> no claim (honest)
+
+    # 7. changed knowledge ("stronger design -> deeper latch") drives a PARAMETER revision.
+    revised = weak.with_kinetics("tu_laci", beta=90.0).with_kinetics("tu_tetr", beta=90.0)
+    assert verify(revised).ok
+    assert revised.topology_digest() == weak.topology_digest()   # same wiring
+    assert revised.parameter_digest() != weak.parameter_digest() # genuinely new candidate
+
+    # the revised candidate is BETTER on the dry proxy (deeper separation) -> the loop improved.
+    sep_revised = adapter.compute(circuit_params(revised.to_payload(), coord=1.0)).value
+    assert sep_revised > sep_weak
+
+    # 8. the redesign is auditable: the topology diff attributes it to kinetics only.
+    d = sbol_adapt.topology_diff(weak, revised)
+    assert d["first_divergence"] == "kinetics"
+    assert set(d["kinetics_changed"]) == {"tu_laci", "tu_tetr"}

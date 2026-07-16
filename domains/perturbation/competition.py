@@ -18,6 +18,7 @@ wrong). The gate can and should return NEGATIVE -- that is knowledge, not failur
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -31,8 +32,18 @@ from expos.adapters.models.virtual_cell import (
 _TOPK_DE = 8  # top-k most-moved axes for the DE-overlap fidelity face
 #: nominal coverage of the 1-sigma predictive interval (calibration target).
 _NOMINAL_COVERAGE = 0.6827
+#: sigma multipliers at which we probe the predictive interval to build a calibration
+#: CURVE (not a single point): each level's nominal Gaussian coverage is erf(z/sqrt2).
+_CAL_LEVELS = (0.5, 1.0, 1.5, 2.0)
+_CAL_NOMINAL = tuple(math.erf(z / math.sqrt(2.0)) for z in _CAL_LEVELS)
 #: rough compute-cost proxy per backend name (experiment_cost face; higher = costlier).
-_COST_PROXY = {"mean_baseline": 1.0, "linear_response": 2.0, "knn_response": 8.0}
+_COST_PROXY = {
+    "mean_baseline": 1.0,
+    "linear_response": 2.0,
+    "knn_response": 8.0,
+    "pathway_informed": 6.0,
+    "ensemble": 12.0,
+}
 
 
 @dataclass(frozen=True)
@@ -45,9 +56,13 @@ class FaceScores:
     l2_mean: float  # mean per-perturbation L2 (lower better)
     pearson_delta: float  # mean per-perturbation Pearson of predicted vs true delta
     l2_per_pert: np.ndarray = field(repr=False, default_factory=lambda: np.zeros(0))
-    # calibration
+    # calibration (a CURVE, not one point: coverage probed at several sigma levels)
     coverage_68: float = 0.0  # empirical coverage of the 1-sigma interval
-    calibration_error: float = 0.0  # |coverage - nominal|
+    calibration_error: float = 0.0  # |coverage_68 - nominal| (gate uses this)
+    calibration_ece: float = 0.0  # mean |empirical - nominal| across _CAL_LEVELS (curve ECE)
+    coverage_curve: tuple[float, ...] = ()  # empirical coverage at each _CAL_LEVELS sigma
+    sharpness: float = 0.0  # mean predictive std (only meaningful WITH good coverage)
+    gaussian_nll: float = 0.0  # mean per-axis Gaussian NLL (proper score: accuracy+calib)
     # biological fidelity
     de_overlap: float = 0.0  # top-k moved-axis overlap (with sign)
     # OOD / abstention
@@ -88,13 +103,32 @@ def score_backend(
     )
 
     l2s, pears, covers = [], [], []
+    # per-axis pools for the multi-level calibration curve + proper scores.
+    level_hits = [[] for _ in _CAL_LEVELS]  # empirical coverage at each sigma level
+    sharp_pool, nll_pool = [], []
     for i, p in enumerate(preds):
         if ood_mask[i] or p.abstained:
             continue
         err = p.mean - truth[i]
+        std = np.maximum(p.std, 1e-9)
         l2s.append(float(np.linalg.norm(err)))
         pears.append(_pearson(p.mean, truth[i]))
-        covers.append(float(np.mean(np.abs(err) <= p.std)))
+        covers.append(float(np.mean(np.abs(err) <= std)))
+        for li, z in enumerate(_CAL_LEVELS):
+            level_hits[li].append(float(np.mean(np.abs(err) <= z * std)))
+        sharp_pool.append(float(np.mean(std)))
+        # Gaussian negative log-likelihood per axis (accuracy + calibration in one score).
+        nll_pool.append(
+            float(np.mean(0.5 * np.log(2 * math.pi * std**2) + (err**2) / (2 * std**2)))
+        )
+    coverage_curve = tuple(
+        float(np.mean(h)) if h else 0.0 for h in level_hits
+    )
+    calibration_ece = (
+        float(np.mean([abs(c - n) for c, n in zip(coverage_curve, _CAL_NOMINAL)]))
+        if any(level_hits)
+        else 0.0
+    )
 
     # DE-overlap fidelity: top-k moved axes (signed) on in-dist non-abstained points.
     overlaps = []
@@ -124,6 +158,10 @@ def score_backend(
         l2_per_pert=l2_arr,
         coverage_68=float(np.mean(covers)) if covers else 0.0,
         calibration_error=abs((float(np.mean(covers)) if covers else 0.0) - _NOMINAL_COVERAGE),
+        calibration_ece=calibration_ece,
+        coverage_curve=coverage_curve,
+        sharpness=float(np.mean(sharp_pool)) if sharp_pool else 0.0,
+        gaussian_nll=float(np.mean(nll_pool)) if nll_pool else 0.0,
         de_overlap=float(np.mean(overlaps)) if overlaps else 0.0,
         ood_abstain_rate=ood_ab,
         id_abstain_rate=id_ab,

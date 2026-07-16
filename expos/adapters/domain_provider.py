@@ -78,9 +78,33 @@ INPUT_KIND_MOLECULAR_GEOMETRY = "molecular_geometry"
 INPUT_KIND_SEQUENCE_CONSTRUCT = "sequence_construct"
 INPUT_KIND_SEQUENCE_FEATURES = "sequence_features"
 
+# -- breadth-first Biology Program input kinds (M26 / M27 v0.1) ---------------
+#
+# Two further neutral payload SHAPES the dual-leg dry dispatch routes, added centrally so
+# every provider/adapter references one vocabulary (M26.md SEAM 1 / M27.md SEAM 1). Both
+# domains currently declare the SAME string literals LOCALLY (circuit_adapter /
+# perturbation.objects); these constants are byte-compatible with those literals, so
+# converging on them is a no-op for the domain layer and leaves chemistry / M24-B untouched
+# (they never declare these capabilities). The kernel never sees either literal — the typed
+# graph / perturbation payload rides as the neutral ``ComputeTarget.payload`` dict exactly as
+# ``sequence_construct`` does.
+#
+#   circuit_topology       -> M26 payload = a serialised typed circuit graph
+#                             (``CircuitGraph.to_payload()``); dry leg verifies + simulates it
+#                             into a DYNAMIC-phenotype summary (value + secondary).
+#   cell_state_perturbation -> M27 payload = {knockout, design_coord, modality}; dry leg is a
+#                             model-competition scorer over the cell-state response.
+INPUT_KIND_CIRCUIT_TOPOLOGY = "circuit_topology"
+INPUT_KIND_CELL_STATE_PERTURBATION = "cell_state_perturbation"
+
 #: payload_schema_version stamped on a ``molecular_geometry`` ComputeTarget. Bump
 #: (additively) if the chemistry payload shape {zmatrix, charge, spin} ever changes.
 MOLECULAR_GEOMETRY_SCHEMA_VERSION = "molecular_geometry/1"
+
+#: payload_schema_version peers for the biology input kinds (bump additively on a payload
+#: shape change). Byte-compatible with the domain-local literals the M26/M27 providers ship.
+CIRCUIT_TOPOLOGY_SCHEMA_VERSION = "circuit_topology/1"
+CELL_STATE_PERTURBATION_SCHEMA_VERSION = "cell_state_perturbation/1"
 
 
 @dataclass(frozen=True)

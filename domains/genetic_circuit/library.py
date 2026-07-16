@@ -19,6 +19,7 @@ Two preset circuit families realise the ref's two-step task plan (docs/bio_refs/
 from __future__ import annotations
 
 from .graph import (
+    INT_ACTIVATES,
     INT_REPRESSES,
     ROLE_CDS,
     ROLE_PROMOTER,
@@ -39,11 +40,17 @@ _PROMOTER_MED = Part("pTet_J23106", ROLE_PROMOTER, "tttacggctagctcagtcctaggtatag
 _PROMOTER_WEAK = Part("pTet_J23114", ROLE_PROMOTER, "tttatggctagctcagtcctaggtacaatgctagc")
 _PLAC = Part("pLac", ROLE_PROMOTER, "aattgtgagcggataacaattgacattgtgagcggataacaagat")
 _PTET = Part("pTetR", ROLE_PROMOTER, "tccctatcagtgatagagattgacatccctatcagtgatagagat")
+_PCI = Part("pR_lambda", ROLE_PROMOTER, "taacaccgtgcgtgttgactattttacctctggcggtgataat")
+_PIND = Part("pBAD_inducible", ROLE_PROMOTER, "acgcttttatcgcaactctctactgtttctccatacccgttttt")
 _RBS_STRONG = Part("B0034", ROLE_RBS, "aaagaggagaaa")
 _CDS_GFP = Part("sfGFP", ROLE_CDS, "atgagcaaaggagaagaactttt")
 _CDS_LACI = Part("LacI", ROLE_CDS, "atggtgaatgtgaaaccagtaacg")
 _CDS_TETR = Part("TetR", ROLE_CDS, "atgtccagattagataaaagtaaa")
+_CDS_CI = Part("cI", ROLE_CDS, "atgagcacaaaaaagaaaccatta")
 _TERM = Part("B0015", ROLE_TERMINATOR, "ccaggcatcaaataaaacg")
+
+#: the external small-molecule inducer species (a dose knob, NOT a part / product).
+INDUCER_IPTG = "IPTG"
 
 #: Promoter-strength design ladder for the expression cassette (public relative strength).
 #: (part, relative promoter strength coordinate in [0,1]).
@@ -120,6 +127,98 @@ def toggle_switch(coord: float = 1.0) -> CircuitGraph:
     )
 
 
+# --------------------------------------------------------------------------- dose-response
+
+
+def dose_response(coord: float = 1.0) -> CircuitGraph:
+    """An INDUCIBLE expression cassette: a single reporter unit whose promoter is ACTIVATED by
+    an external small-molecule inducer (IPTG), the canonical dose-response element. ``coord``
+    in [0,1] is the applied inducer DOSE (a simulation condition mapped to the input level by
+    the adapter, NOT a topology property), so a higher dose drives a higher settled reporter
+    level -- the design coordinate the steady-state dynamic faces move along.
+    n=2 activation Hill gives the sigmoidal dose-response whose EC50 the curve derivation reads."""
+    kin = Kinetics(beta=50.0, basal=0.5, K=1.0, n=2.0, gamma=1.0)
+    tu = TranscriptionUnit(
+        tu_id="tu_reporter", promoter=_PIND.part_id, rbs=_RBS_STRONG.part_id,
+        cds=_CDS_GFP.part_id, product="GFP", kinetics=kin, is_reporter=True,
+    )
+    return CircuitGraph(
+        circuit_id=f"dose_IPTG_c{coord:.2f}",
+        parts=(_PIND, _RBS_STRONG, _CDS_GFP, _TERM),
+        units=(tu,),
+        interactions=(Interaction(kind=INT_ACTIVATES, regulator=INDUCER_IPTG, target_tu="tu_reporter"),),
+        behaviour="dose_response",
+        inputs=(INDUCER_IPTG,),
+    )
+
+
+def dose_ladder(doses: tuple[float, ...] = (0.1, 0.4, 0.7, 1.0)) -> list[tuple[str, float, CircuitGraph]]:
+    """(circuit_id, dose coord, graph) for a dose-response ladder (one inducible circuit per
+    dose). Ordered lowest dose first; feeds the EC50 curve derivation."""
+    return [(f"dose_IPTG_c{d:.2f}", d, dose_response(d)) for d in doses]
+
+
+# --------------------------------------------------------------------------- feed-forward loop
+
+
+def feed_forward_loop() -> CircuitGraph:
+    """A three-node coherent feed-forward loop (FFL): a constitutively-expressed master TF_A
+    ACTIVATES both an intermediate TF_B unit and the output reporter unit, and TF_B also
+    ACTIVATES the reporter (the A->B, A->C, B->C triangle). One of the canonical six circuit
+    types; here it exercises the FFL motif detector and a three-species ODE reaching a steady
+    state (no dynamic face -- it is a structure/verify + simulation exemplar)."""
+    kin = Kinetics(beta=40.0, basal=0.5, K=1.0, n=2.0, gamma=1.0)
+    kin_a = Kinetics(beta=40.0, basal=8.0, K=1.0, n=2.0, gamma=1.0)  # constitutive driver
+    tu_a = TranscriptionUnit("tu_a", _PROMOTER_STRONG.part_id, _RBS_STRONG.part_id,
+                             _CDS_LACI.part_id, "TF_A", kinetics=kin_a)
+    tu_b = TranscriptionUnit("tu_b", _PLAC.part_id, _RBS_STRONG.part_id,
+                             _CDS_TETR.part_id, "TF_B", kinetics=kin)
+    tu_c = TranscriptionUnit("tu_c", _PCI.part_id, _RBS_STRONG.part_id,
+                             _CDS_GFP.part_id, "GFP", kinetics=kin, is_reporter=True)
+    return CircuitGraph(
+        circuit_id="ffl_coherent",
+        parts=(_PROMOTER_STRONG, _PLAC, _PCI, _RBS_STRONG, _CDS_LACI, _CDS_TETR, _CDS_GFP, _TERM),
+        units=(tu_a, tu_b, tu_c),
+        interactions=(
+            Interaction(kind=INT_ACTIVATES, regulator="TF_A", target_tu="tu_b"),
+            Interaction(kind=INT_ACTIVATES, regulator="TF_A", target_tu="tu_c"),
+            Interaction(kind=INT_ACTIVATES, regulator="TF_B", target_tu="tu_c"),
+        ),
+        behaviour="feed_forward_loop",
+    )
+
+
+# --------------------------------------------------------------------------- oscillator (repressilator)
+
+
+def repressilator(coord: float = 1.0) -> CircuitGraph:
+    """The minimal three-node REPRESSILATOR: LacI -| TetR -| cI -| LacI, a repression 3-cycle
+    that sustains oscillation (docs/bio_refs/02 §B task 3). A GFP-fused cI arm is the reporter.
+    ``coord`` in [0,1] tunes the degradation/dilution rate ``gamma`` of all three arms
+    (gamma = 0.4 + 0.6*coord), which sets the oscillation FREQUENCY -- the design coordinate
+    the oscillation-frequency derived phase moves along (frequency rises with coord).
+    n=3 cooperativity + asymmetric initial condition are required for a robust limit cycle."""
+    gamma = 0.4 + 0.6 * coord
+    kin = Kinetics(beta=60.0, basal=0.5, K=1.0, n=3.0, gamma=gamma)
+    tu_laci = TranscriptionUnit("tu_laci", _PCI.part_id, _RBS_STRONG.part_id,
+                                _CDS_LACI.part_id, "LacI", kinetics=kin)
+    tu_tetr = TranscriptionUnit("tu_tetr", _PLAC.part_id, _RBS_STRONG.part_id,
+                                _CDS_TETR.part_id, "TetR", kinetics=kin)
+    tu_ci = TranscriptionUnit("tu_ci", _PTET.part_id, _RBS_STRONG.part_id,
+                              _CDS_CI.part_id, "cI", kinetics=kin, is_reporter=True)
+    return CircuitGraph(
+        circuit_id=f"repressilator_c{coord:.2f}",
+        parts=(_PCI, _PLAC, _PTET, _RBS_STRONG, _CDS_LACI, _CDS_TETR, _CDS_CI, _TERM),
+        units=(tu_laci, tu_tetr, tu_ci),
+        interactions=(
+            Interaction(kind=INT_REPRESSES, regulator="cI", target_tu="tu_laci"),
+            Interaction(kind=INT_REPRESSES, regulator="LacI", target_tu="tu_tetr"),
+            Interaction(kind=INT_REPRESSES, regulator="TetR", target_tu="tu_ci"),
+        ),
+        behaviour="oscillator",
+    )
+
+
 # --------------------------------------------------------------------------- illegal
 
 
@@ -146,3 +245,19 @@ def dangling_regulator_circuit() -> CircuitGraph:
         Interaction(kind=INT_REPRESSES, regulator="GhostProtein", target_tu="tu_laci"),
     )
     return replace(tg, circuit_id="toggle_dangling", interactions=bad)
+
+
+def broken_repressilator_even_cycle() -> CircuitGraph:
+    """An oscillator-INTENT circuit whose repression graph is only a 2-CYCLE (even), not the
+    odd (>=3) cycle a repressilator needs -- structurally valid genetics, but the oscillator
+    MOTIF is absent, so the function-level gate must REJECT it. Proves the oscillator motif
+    detector does not accept a bistable (even-cycle) topology as an oscillator."""
+    from dataclasses import replace
+
+    r = repressilator(1.0)
+    # keep only the LacI-|TetR and (add) TetR-|LacI edges -> a 2-cycle, not the 3-cycle.
+    kept = (
+        Interaction(kind=INT_REPRESSES, regulator="LacI", target_tu="tu_tetr"),
+        Interaction(kind=INT_REPRESSES, regulator="TetR", target_tu="tu_laci"),
+    )
+    return replace(r, circuit_id="repressilator_broken_even", interactions=kept)

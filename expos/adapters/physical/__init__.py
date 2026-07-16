@@ -11,7 +11,19 @@ from expos.adapters.physical.fake_backends import (
     FakeLiquidHandler,
     FakePlateReader,
     DispatchReceipt,
+    Fault,
     dispatch,
+    pick_backend,
+)
+from expos.adapters.physical.orchestrator import (
+    ProtocolExecutor,
+    RunLog,
+    UnitResult,
+    run_ops,
 )
 
-__all__ = ["FakeLiquidHandler", "FakePlateReader", "DispatchReceipt", "dispatch"]
+__all__ = [
+    "FakeLiquidHandler", "FakePlateReader", "DispatchReceipt", "Fault",
+    "dispatch", "pick_backend",
+    "ProtocolExecutor", "RunLog", "UnitResult", "run_ops",
+]
