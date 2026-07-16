@@ -416,40 +416,40 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
   <!-- ================= sOrgans — five-organ breadth-first biology OS ================= -->
   <section class="scene" id="sOrgans">
     <div class="kicker">06 · Breadth-first · five organs of a biology-primary OS</div>
-    <h2>Beyond one closed loop: <em>five organs</em> of a biology research OS (M25–M29), each a runnable v0.1 slice — honest about which are load-bearing</h2>
+    <h2>Beyond one closed loop: <em>five organs</em> of a biology research OS (M25–M29), each a fuller v0.1 vertical slice — honest about what has landed</h2>
     <div class="organs">
       <div class="organ rv d1">
         <div class="ohead">M25 · Design biology</div>
         <div class="obig">generative construct</div>
-        <div class="obody">parent → 10 promoter-swap children → expression proxy. An auditable mutation operator that writes candidate constructs.</div>
-        <div class="obadge">runnable skeleton</div>
+        <div class="obody">5 auditable mutation operators (2 translation-invariant, dual-use-safe) + generation pool + PROV lineage + diversity acquisition. Discriminative case: a dry ranking overturned by wet phenotype (effect −0.322), on the real claim + knowledge ledger.</div>
+        <div class="obadge tests">24 tests</div>
       </div>
       <div class="organ rv d2">
         <div class="ohead">M26 · Program biology</div>
         <div class="obig">genetic circuit</div>
-        <div class="obody">typed graph + 5-tier verify gate + time-series dynamic faces (high / flipped / flat phases) — the first move beyond a scalar phenotype.</div>
-        <div class="obadge tests">14 tests</div>
+        <div class="obody">circuit family 2 → 5 (dose-response / FFL / repressilator oscillator) + 5-tier verify gate + time-series dynamic faces, now with an oscillation-frequency phase. The one organ wired whole-OS.</div>
+        <div class="obadge tests">20 tests · mcl e2e landed</div>
       </div>
       <div class="organ rv d3">
         <div class="ohead">M27 · Perturb biology</div>
         <div class="obig">virtual-cell tournament</div>
-        <div class="obody">model tournament under a baseline-gate: on scrambled data kNN fails to beat the mean → a negative claim. It truly rejects an expensive model.</div>
-        <div class="obadge tests">17 tests</div>
+        <div class="obody">5-backend tournament under a baseline-gate, grounded in a real published Perturb-seq benchmark (no method beats the mean across 3 datasets; flagship scGPT clears zero) enforced as a test. It truly rejects an expensive model.</div>
+        <div class="obadge tests">26 tests</div>
       </div>
       <div class="organ rv d4">
         <div class="ohead">M28 · Understand biology</div>
         <div class="obig">discovery agents</div>
-        <div class="obody">Hypothesis / Analysis / Contradiction / Replication agents run ≥2 competing hypotheses → supported vs rejected separate. Agents only emit an evidence ledger — the moat.</div>
-        <div class="obadge">runnable skeleton</div>
+        <div class="obody">Four discovery agents (Hypothesis / Analysis / Contradiction / Replication) run ≥2 competing hypotheses → supported vs rejected separate, driving the real claim ledger. Agents emit evidence only; the kernel gate certifies — the structural moat.</div>
+        <div class="obadge tests">8 tests</div>
       </div>
       <div class="organ rv d5">
         <div class="ohead">M29 · Execute biology</div>
         <div class="obig">protocol → device_ir</div>
-        <div class="obody">protocol → device_ir → fake liquid handler / plate reader → COMMITTED, reusing the M23 transaction: protocol-to-simulated-physical.</div>
-        <div class="obadge">runnable skeleton</div>
+        <div class="obody">typed protocol → device_ir → fake liquid handler / plate reader → COMMITTED through the M23 sensed-state gate; five transaction faces. Protocol-to-simulated-physical.</div>
+        <div class="obadge tests">19 tests</div>
       </div>
     </div>
-    <div class="organseam rv d6">M26 and M27 are load-bearing (14 + 17 tests); M25 / M28 / M29 are runnable skeletons. Five organs exist and each runs in isolation — <b>whole-OS integration is the seam still ahead, not a shipped product, and none of the five is double-signed.</b></div>
+    <div class="organseam rv d6">All five organs are now fleshed out to fuller v0.1 vertical slices (135 tests green, incl. chemistry regression). <b>M26's whole-OS mcl e2e has landed; the other four run domain-local e2e end to end, with whole-OS wiring the remaining seam — not a shipped product, and none of the five is double-signed.</b></div>
   </section>
 
   <!-- ================= sRoad — roadmap ================= -->
@@ -463,7 +463,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
       <div class="rmarrow rv d3">→</div>
       <div class="rmnode done rv d3"><div class="rstage">M24-B · double-signed</div><div class="rt">Cell-Free Expression Loop</div>raw + controls both certify decisively (three-state + fingerprint migration); ④ mechanism-proven, not self-triggered in-loop</div>
       <div class="rmarrow rv d4">→</div>
-      <div class="rmnode now rv d4"><div class="rstage">M25–M29 · breadth-first v0.1</div><div class="rt">Five-organ skeletons</div>design · program · perturb · understand · execute biology — runnable v0.1 slices (skeleton/simulation-level)</div>
+      <div class="rmnode now rv d4"><div class="rstage">M25–M29 · fuller v0.1</div><div class="rt">Five-organ v0.1 slices</div>design · program · perturb · understand · execute biology — fuller v0.1 slices (135 tests, simulation-level); M26 whole-OS mcl e2e landed, the other four domain-local e2e</div>
       <div class="rmarrow rv d5">→</div>
       <div class="rmnode later rv d5"><div class="rstage">goal</div><div class="rt">Biological Research OS</div></div>
     </div>
@@ -483,7 +483,7 @@ html,body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-fa
     <div class="finelines rv d4">
       Real dry-leg computation (chemistry PySCF; biology sequence-feature proxy) · credible simulated wet leg<br>
       Domain swap proven across 2 chemistry domains; biology execution surface built (Contract v3)<br>
-      Biological loop (M24-B): double-signed — raw + controls both certify decisively; ④ proposal reordering mechanism-proven (not self-triggered in-loop). Five-organ breadth-first v0.1 skeletons (M25–M29) now exist, skeleton/simulation-level<br>
+      Biological loop (M24-B): double-signed — raw + controls both certify decisively; ④ proposal reordering mechanism-proven (not self-triggered in-loop). Five-organ breadth-first v0.1 slices (M25–M29) now fleshed out (135 tests, simulation-level); M26's whole-OS mcl e2e landed, the other four domain-local e2e — none double-signed<br>
       Real hardware not connected — a parallel engineering track
     </div>
   </section>
@@ -522,7 +522,7 @@ const SOURCE = {
   sPivot:'Strategy: docs/ROADMAP_BIOLOGY_PRIMARY.md · biology = primary direction (2026-07-14)',
   sExec:'Contract v3: docs/M24_CONTRACT_V3.md · dry proxy: expos/adapters/dry/sequences.py (computed, not a loop result) · truth faces: expos/adapters/wet/sim_reader.py (design, not measured)',
   sLedger:'Source: runs/m24b_bio_nc (cell_free_expression_screen · raw readout path) · three-state verdicts + evidence factors + knowledge fingerprint d04b4d05→7f8ce457 · tests/test_m24_bio_domain.py 12 passed · controls-path certification pending QC rescale',
-  sOrgans:'Source: M25–M29 breadth-first v0.1 · M26 genetic-circuit 14 tests · M27 virtual-cell baseline-gate 17 tests · M25/M28/M29 runnable skeletons · none double-signed · whole-OS integration = open seam (skeleton/simulation-level)',
+  sOrgans:'Source: M25–M29 fuller v0.1 · M25 24 · M26 20 (+9 landed mcl e2e) · M27 26 · M28 8 · M29 19 tests · 135 green incl. chemistry regression · M26 whole-OS mcl e2e landed, the other four domain-local e2e · none double-signed (simulation-level)',
   sRoad:'Roadmap: docs/ROADMAP_BIOLOGY_PRIMARY.md · M24-B = next milestone · hardware = parallel track (M26)',
 };
 

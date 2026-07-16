@@ -71,27 +71,33 @@ A real dry–wet–agent loop over cell-free protein expression:
   proposal) but does **not self-trigger inside a single low-signal loop** — a
   real explore/exploit limit, honestly flagged, not a bug.
 
-### Breadth-first: the five-organ Biology-Primary OS (M25–M29, v0.1 skeleton)
+### Breadth-first: the five-organ Biology-Primary OS (M25–M29, fuller v0.1)
 
-Built in parallel as a **vertical-slice skeleton** of the biology OS. Each organ
-is simulation-level; end-to-end wiring awaits the integration owner's shared
-seams (authoritative: `docs/BIOLOGY_PROGRAM_2026.md` §1.5).
+Built in parallel and now deepened from skeletons to **fuller v0.1 vertical
+slices** of the biology OS — **135 tests green incl. chemistry regression**, with
+the kernel staying biology-blind. Each organ is simulation-level; **only M26 is
+wired whole-OS** (its dry+wet loop runs through `run_mcl_loop`), the other four
+run domain-local e2e end to end with whole-OS wiring the remaining seam
+(authoritative: `docs/BIOLOGY_PROGRAM_2026.md` §1.5, per-seam docs in
+`docs/bio_seams/`).
 
 | Organ | What | Maturity |
 |---|---|---|
-| **M25 · Design** | generative construct design (sequence proposal) | runnable skeleton |
-| **M26 · Program** | typed genetic-circuit graph + 5-tier verify gate + time-series dynamic faces | more complete — domain-local e2e + 14 tests |
-| **M27 · Perturb** | virtual-cell model tournament + discriminative baseline-gate | more complete — domain-local e2e + 17 tests |
-| **M28 · Understand** | discovery agents (hypothesis / analysis) | runnable skeleton |
-| **M29 · Execute** | protocol → fake physical backend | runnable skeleton |
+| **M25 · Design** | 5 auditable mutation operators (2 translation-invariant) + generation pool + PROV lineage + diversity acquisition; discriminative case (dry ranking overturned by wet phenotype, effect −0.322) on the real claim + knowledge ledger | fuller v0.1 — domain-local e2e + 24 tests |
+| **M26 · Program** | typed genetic-circuit graph, circuit family 2→5 (dose-response / FFL / repressilator oscillator) + 5-tier verify gate + time-series dynamic faces + oscillation-frequency phase | fuller v0.1 — **whole-OS mcl e2e landed** · 20 tests + 9 landed mcl e2e |
+| **M27 · Perturb** | 5-backend virtual-cell tournament + discriminative baseline-gate, grounded in a real published Perturb-seq benchmark (no method beats the mean across 3 datasets; scGPT clears zero) enforced as a test | fuller v0.1 — domain-local e2e + 26 tests |
+| **M28 · Understand** | four discovery agents (Hypothesis / Analysis / Contradiction / Replication) driving the real claim ledger; agents emit evidence only, the kernel gate certifies (structural moat) | fuller v0.1 — domain-local e2e + 8 tests |
+| **M29 · Execute** | typed protocol → device_ir → fake liquid-handler / plate-reader through the M23 sensed-state COMMITTED gate; five transaction faces | fuller v0.1 — domain-local e2e + 19 tests |
 
 **Honest boundary.** All biology is **simulation-level** — credible simulated wet
 reads + real *sequence* dry proxies (GC / CAI / RBS / RNA-folding ΔG, honestly
-labelled biased proxies), with **no real wet-lab and no real hardware.** M24-B is
+labelled biased proxies), with **no real wet-lab and no real hardware.** M27's
+benchmark grounding is a real *published* result used as calibration, not this
+run's own wet observation; M29 is protocol-to-simulated-physical. M24-B is
 double-signed only in the sense of *raw + controls certification*; the five
-organs are skeletons/simulations — not a finished product, not double-signed, and
-not yet wired end to end. Public sequence data and parts are used as design
-knowledge / calibration, never as this run's observations.
+organs are fuller v0.1 slices — not a finished product, not double-signed, and
+(except M26) not yet wired whole-OS. Public sequence data and parts are used as
+design knowledge / calibration, never as this run's observations.
 
 ---
 
@@ -104,7 +110,7 @@ complete picture incl. chemistry and the real-hardware track):
 |---|---|---|
 | **Biology (primary direction) · execution surface** | cell-free protein expression / genetic-construct screening: Domain Contract v3 (`compute_targets → ComputeTarget`, `input_kind` supports `molecular_geometry` / `sequence_construct`); real sequence dry proxies + three truth faces (expression_high / expression_flipped / flat, by *design* not measured) | ✅ execution surface in place (M24-A) |
 | **Biology · adaptive closed loop** | first real biological loop (`cell_free_expression_screen`): phenotype → evidence → claim → knowledge; three-state separation + fingerprint migration + biology-blind dry leg (details above) | ✅ **double-signed (M24-B): raw + controls both certify** (simulation-level) |
-| **Biology · breadth-first five organs** | M25–M29 vertical-slice skeleton of the Biology-Primary OS (Design / Program / Perturb / Understand / Execute); M26/M27 more complete (green tests), M25/M28/M29 runnable skeletons | 🔨 v0.1 skeleton (simulation-level, not yet wired e2e) |
+| **Biology · breadth-first five organs** | M25–M29 fuller v0.1 vertical slices of the Biology-Primary OS (Design / Program / Perturb / Understand / Execute), 135 tests green incl. chemistry regression; M26 wired whole-OS (mcl e2e landed), the other four domain-local e2e | 🔨 fuller v0.1 (simulation-level; only M26 wired whole-OS, none double-signed) |
 | **Chemistry (validated foundation / jumping board)** | solvent / catalyst screening, full dry–wet–agent loop; domain-swap existence proof with the same kernel/loop byte-unchanged — this is what proved the runtime can swap to biology | ✅ done & countersigned (M16–M22) |
 | **Real hardware (parallel engineering track)** | transaction-safe semantics for real physical actions — recoverable / re-readable / committable / non-replayable (Real-Wet Readiness Contract) | ✅ ready against a fake physical backend / ❌ real hardware pending; real wet-lab validation ❌ |
 
@@ -338,7 +344,7 @@ dry_wet_agent_os/
 | M23 | Real-Wet Readiness Contract (real-wet transaction surface, against fake physical backend; real hardware pending) | ✅ done (countersigned) |
 | **M24-A** | **Biology execution surface: Domain Contract v3 (compute_targets/ComputeTarget) + sequence dry proxies + three truth faces** | **✅ in place** |
 | **M24-B** | **Adaptive biological closed loop (cell-free expression: phenotype → evidence → claim → knowledge)** — three-state separation + fingerprint migration; raw + controls paths both certify (controls via scale-aware w_min fix, effective_w_min 83.33, e=102→1034); criterion ④ mechanism-proven (not self-triggered in-loop); simulation-level | **✅ double-signed (raw + controls both certify)** |
-| M25–M29 | **Biology Program goes breadth-first**: five organs built in parallel as a **v0.1 vertical-slice skeleton** of the Biology-Primary OS — M26 genetic circuits (typed circuit graph + 5-tier verify gate + time-series dynamic faces, 14 tests) & M27 perturbation (model-tournament + discriminative baseline-gate, 17 tests) are the more complete (each with domain-local e2e + faces + green tests); M25 generative construct / M28 discovery agents / M29 protocol execution are **runnable skeletons** (domain-local smoke + seam lists). All skeleton/simulation-level; end-to-end wiring awaits the integration owner's shared seams (authoritative: `docs/BIOLOGY_PROGRAM_2026.md` §1.5) | 🔨 in progress (v0.1 skeleton) |
+| M25–M29 | **Biology Program breadth-first, deepened to fuller v0.1**: five organs fleshed out from skeletons to **fuller v0.1 vertical slices** of the Biology-Primary OS — **135 tests green incl. chemistry regression**, kernel biology-blind. M25 Design (5 auditable mutation operators + PROV lineage + diversity acquisition; discriminative dry-overturned-by-wet case, effect −0.322; 24 tests); M26 Program (circuit family 2→5 incl. repressilator oscillator + oscillation-frequency phase; **integration owner landed M26 seams 1–5 → whole-OS dry+wet loop runs through `run_mcl_loop`**; 20 tests + 9 landed mcl e2e); M27 Perturb (5-backend tournament + baseline-gate grounded in a real published Perturb-seq benchmark enforced as a test; 26 tests); M28 Understand (four discovery agents driving the real claim ledger, kernel gate certifies; 8 tests); M29 Execute (typed protocol → device_ir → fake liquid-handler/plate-reader through the M23 COMMITTED gate; 19 tests). All simulation/retrospective/fake-backend level, honestly labelled; **only M26 wired whole-OS**, the other four run domain-local e2e with whole-OS wiring the remaining seam (authoritative: `docs/BIOLOGY_PROGRAM_2026.md` §1.5, `docs/bio_seams/`) | 🔨 fuller v0.1 (simulation-level; M26 whole-OS, none double-signed) |
 
 > The authoritative milestone ledger is `CHECKPOINTS.md` (verification commands +
 > deviations); the biology roadmap is `docs/ROADMAP_BIOLOGY_PRIMARY.md`.
