@@ -35,6 +35,7 @@ from agents.biology_discovery.objects import (
 )
 from agents.biology_discovery import ledger_bridge
 from agents.biology_discovery.certification import (
+    ArmSelector,
     DiscoveryCertification,
     DiscoveryVerdict,
 )
@@ -55,4 +56,5 @@ __all__ = [
     "ledger_bridge",
     "DiscoveryCertification",
     "DiscoveryVerdict",
+    "ArmSelector",
 ]
